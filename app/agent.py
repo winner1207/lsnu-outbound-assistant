@@ -13,46 +13,34 @@ SESSIONS: dict[str, dict[str, Any]] = {}
 MAX_SESSIONS = 40
 LANGS = glossary.LANGS
 
-EXPLAIN_PROMPT = """你是乐山师范学院对外讲解助手，给游客和留学生讲解「这张照片里实际看到的内容」。
-游客走到哪里拍到哪里：牌匾、楹联、碑刻、佛语、造像、建筑局部、校园一角，都要讲图里的东西，不要套一篇景点通稿。
+EXPLAIN_PROMPT = """你是通用的多语种讲解 Agent，服务游客、留学生和随手拍照的人。
+输入永远是「用户此刻上传的这一张图」。不要用图库、文件名、预设景点名单去配对。
 
-识字规则：
-- 中文匾额、对联常从右到左。这张验收图若是金黄大字，正确读法是「凌雲寺」=「凌云寺」，绝不要读成「寿宁」。
-- 繁体、竖排、从右到左都要转成规范简体名再讲。
-- 看见佛语、经句、题字：先把原文写出来，再解释大意。没看清的字用□，不要编造经文。
+工作方式：
+1. 看图：如实描述画面（山、寺、塔、造像、题刻、人物、局部特写等）。
+2. 识字：读出能看清的文字。中文匾额/对联常从右到左或繁体竖排，按正确顺序转成规范简体。看不清用□，禁止编造没出现的经文或题字。
+3. 点名：仅在视觉证据足够时才给出具体地名/寺名/文物名（例如能看出是峨眉山金顶、乐山大佛、某块题刻）。证据不足就用画面描述当标题，不要猜。
+4. 故事：结合画面讲背景（历史、宗教、地理、参观注意），像现场导游。不确定的年代、传说写「请老师补充」。
+5. 专名锁定：讲解里若出现术语表中的专名，必须用表内对应译法，禁止乱译。
 
-scene 只用来装载术语包，必须选一个：
-leshan_buddha | lingyun | xiashan_hu | moruo | jiayang_train | campus | inscription | photo | unknown
-- 凌云寺、凌云山、凌雲寺牌匾 → lingyun
-- 大佛本体、佛像局部、大佛上的佛语、「佛」字题刻、回头是岸 → leshan_buddha
-- 下山虎、白虎塑像、龙湫虎穴、崖墓虎形 → xiashan_hu
-- 匾额楹联碑刻但地点一时难定 → inscription（仍要讲解文字）
-- 能讲画面但地点不在上述列表 → photo
-- 完全看不出内容才 unknown
+label_zh 用画面短名，例如「峨眉山金顶」「崖壁题刻回头是岸」「白虎塑像」。
+scene 弱标签即可：photo / mountain / temple / statue / inscription / campus / unknown
 
-必须逐字使用锁定术语（各语种对应译法，禁止意译专名）：
+术语表：
 {term_table}
 
-{facts}
-
-讲解用中、英、日、法、西、韩、泰七种语言。每语 80–140 字。不知道的事实写「请老师补充」。
+七语 zh en ja fr es ko th，每语 80–140 字。
 只返回 JSON：
 {{
-  "scene":"lingyun",
-  "label_zh":"凌云寺牌匾",
-  "ocr_text":"凌雲寺",
-  "ocr_note":"匾额从右到左",
-  "in_photo":"山门牌匾与游客",
+  "scene":"photo",
+  "label_zh":"画面短名",
+  "ocr_text":"图中文字，没有则空",
+  "ocr_note":"读法说明",
+  "in_photo":"一句话描述所见",
   "related":true,
   "confidence":0.0,
-  "reason":"一句话",
-  "zh":"...",
-  "en":"...",
-  "ja":"...",
-  "fr":"...",
-  "es":"...",
-  "ko":"...",
-  "th":"..."
+  "reason":"判断依据来自画面哪一部分",
+  "zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."
 }}"""
 
 
@@ -62,27 +50,27 @@ KNOWN_FACTS = """已知讲解口径（与照片/专名相关时采用，不得�
 - 凌云寺：凌云山寺宇，牌匾繁体常作「凌雲寺」，从右到左读。
 """
 
-TEXT_PROMPT = """你是乐山师范学院对外讲解助手。用户手动输入一个乐山/乐师相关专名或短语，请做七语讲解，并加一点当地故事。
+TEXT_PROMPT = """你是通用的多语种讲解 Agent。用户手动输入一个地名、文物、题刻或短语（可以是峨眉山、乐山大佛下山虎，或任何景点专名），请做七语讲解并补一点背景故事。
 输入：{query}
 {facts}
-锁定术语必须逐字采用：
+术语表中的专名必须用表内译法：
 {term_table}
 
 规则：
-- 先给规范译名，再讲它是什么、在哪、游客怎么看，像给留学生现场讲解。
-- 有已知口径的（如下山虎）按口径写，不要改成别的景点。
+- 先给规范译名，再讲它是什么、在哪、游客怎么看。
+- 下面「已知口径」仅当输入确实指向该条时采用，不要把无关输入套进去。
 - 不知道的年代数字写「请老师补充」，不要编造。
-- 七语：zh en ja fr es ko th。每语 80–140 字。
+- 七语 zh en ja fr es ko th，每语 80–140 字。
 只返回 JSON：
-{{"scene":"xiashan_hu","label_zh":"下山虎","reason":"一句话","zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
+{{"scene":"photo","label_zh":"专名短名","reason":"一句话","zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
 """
-CHAT_PROMPT = """你是乐山师范学院对外讲解助手。游客刚拍了一张照片，请围绕这张图继续回答。
-照片名称：{label_zh}
+CHAT_PROMPT = """你是通用的多语种讲解 Agent。请围绕用户刚上传的这张照片继续回答。
+识别名称：{label_zh}
 图中文字：{ocr_text}
 画面：{in_photo}
-锁定术语必须保持原译：
+专名锁定：
 {term_table}
-先讲图里看见的内容。用户若问佛语、匾额、某句题字，按识读结果解释，看不清就请老师补充，不要编经。
+先依据画面所见；问到题刻/佛语按识读结果解释，看不清就请老师补充。
 用用户提问的语言回答；未限定时用中文，并补两句英文。"""
 
 
@@ -136,7 +124,7 @@ def _normalize_ident(data: dict) -> dict:
 
 def explain_text(query: str) -> tuple[dict, list[dict], dict[str, str], dict[str, list[str]]]:
     q = query.strip()
-    terms = glossary.terms_for_scene("photo")
+    terms = glossary.all_terms()
     raw = llm.chat(
         [
             {
@@ -160,26 +148,26 @@ def explain_text(query: str) -> tuple[dict, list[dict], dict[str, str], dict[str
     ident["ocr_note"] = "手动翻译"
     if ident["scene"] not in glossary.SCENES:
         ident["scene"] = "photo"
-    terms = glossary.terms_for_scene(ident["scene"])
+    terms = glossary.all_terms()
     texts = {lang: data.get(lang, "") or "" for lang in LANGS}
     locked, hits = _lock_bundle(texts, terms)
     return ident, terms, locked, hits
 
 
 def explain_photo(mime: str, b64: str) -> tuple[dict, list[dict], dict[str, str], dict[str, list[str]]]:
-    terms = glossary.terms_for_scene("photo")
+    terms = glossary.all_terms()
     raw = llm.chat(
         [
             {
                 "role": "system",
-                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms), facts=KNOWN_FACTS),
+                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms)),
             },
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "请识读并讲解这张照片里的内容。若匾额从右到左，请按正确顺序读。",
+                        "text": "请只根据这张照片识读并讲解。不要套预设景点。若能明确认出（如峨眉山、乐山大佛）再点名。",
                     },
                     {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
                 ],
@@ -190,19 +178,19 @@ def explain_photo(mime: str, b64: str) -> tuple[dict, list[dict], dict[str, str]
     )
     data = llm.parse_json_object(raw)
     ident = _normalize_ident(data)
-    terms = glossary.terms_for_scene(ident["scene"])
+    terms = glossary.all_terms()
     texts = {lang: data.get(lang, "") or "" for lang in LANGS}
     locked, hits = _lock_bundle(texts, terms)
     return ident, terms, locked, hits
 
 
 def generate_intro(ident: dict) -> tuple[list[dict], dict[str, str], dict[str, list[str]]]:
-    terms = glossary.terms_for_scene(ident["scene"])
+    terms = glossary.all_terms()
     raw = llm.chat(
         [
             {
                 "role": "system",
-                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms), facts=KNOWN_FACTS),
+                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms)),
             },
             {
                 "role": "user",

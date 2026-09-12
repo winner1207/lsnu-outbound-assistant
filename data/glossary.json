@@ -600,6 +600,52 @@
       ],
       "source": "人名",
       "reviewer": "待审定"
+    },
+    {
+      "id": "golden-summit",
+      "pack": "tourism",
+      "zh": "金顶",
+      "en": "Golden Summit",
+      "ja": "金頂",
+      "fr": "Golden Summit",
+      "es": "Golden Summit",
+      "ko": "금정",
+      "th": "จอมทอง",
+      "aliases_zh": [
+        "金頂"
+      ],
+      "aliases_en": [
+        "Jinding"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "source": "峨眉山",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "baoguo-temple",
+      "pack": "tourism",
+      "zh": "报国寺",
+      "en": "Baoguo Temple",
+      "ja": "報国寺",
+      "fr": "temple Baoguo",
+      "es": "templo Baoguo",
+      "ko": "보국사",
+      "th": "วัดเป่ากั๋ว",
+      "aliases_zh": [
+        "報國寺"
+      ],
+      "aliases_en": [],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "source": "峨眉山",
+      "reviewer": "待审定"
     }
   ]
 }

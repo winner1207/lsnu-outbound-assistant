@@ -37,6 +37,10 @@ def terms_for_scene(scene: str) -> list[dict]:
     return [term for term in data.get("terms") or [] if term.get("pack") in packs]
 
 
+def all_terms() -> list[dict]:
+    return list(load().get("terms") or [])
+
+
 def term_value(term: dict, lang: str) -> str:
     return (term.get(lang) or term.get("en") or term["zh"]).strip()
 

@@ -11,7 +11,7 @@
     <img class="logo" src="/brand/f_logo.png" alt="乐山师范学院">
     <div>
       <h1>对外教学助手</h1>
-      <p>随手拍讲解 · 手动专名 · 中英日法西韩泰</p>
+      <p>通用识图讲解 Agent · 七语 · 专名锁定</p>
     </div>
   </header>
   <main class="layout">
@@ -20,20 +20,18 @@
       <label class="drop" for="file">
         <input id="file" type="file" accept="image/jpeg,image/png,image/webp">
         <img id="preview" alt="预览" hidden>
-        <span id="hint">走到哪里拍到哪里：牌匾、佛语、造像、校园一角（jpg / png / webp，小于 4MB）</span>
+        <span id="hint">任意照片：峨眉山、乐山大佛、牌匾、造像、题刻……（jpg / png / webp，小于 10MB）</span>
       </label>
       <div class="row">
         <button id="analyze" type="button">识别并讲解</button>
         <p id="status" class="muted"></p>
       </div>
-      <label class="field">若地点不准，可手改场景
-        <select id="scene" disabled>
-          <option value="">先上传图片</option>
-        </select>
+      <label class="field" hidden>
+        <select id="scene" disabled></select>
       </label>
       <div class="manual">
-        <label class="field">或手动输入专名（如：乐山大佛下山虎）
-          <input id="query" type="text" maxlength="80" placeholder="乐山大佛下山虎">
+        <label class="field">或手动输入专名（峨眉山金顶、乐山大佛下山虎……）
+          <input id="query" type="text" maxlength="80" placeholder="峨眉山金顶">
         </label>
         <div class="row">
           <button id="translate" type="button">七语讲解</button>
