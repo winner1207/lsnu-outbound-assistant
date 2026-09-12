@@ -646,6 +646,79 @@
       "aliases_th": [],
       "source": "峨眉山",
       "reviewer": "待审定"
+    },
+    {
+      "id": "wanfenglin",
+      "pack": "tourism",
+      "zh": "万峰林",
+      "en": "Wanfenglin",
+      "ja": "万峰林",
+      "fr": "Wanfenglin",
+      "es": "Wanfenglin",
+      "ko": "만봉림",
+      "th": "ว่านเฟิงหลิน",
+      "aliases_zh": [
+        "萬峰林"
+      ],
+      "aliases_en": [
+        "Forest of Ten Thousand Peaks",
+        "Wan Feng Lin"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "source": "贵州兴义",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "bagua-fields",
+      "pack": "tourism",
+      "zh": "八卦田",
+      "en": "Bagua Fields",
+      "ja": "八卦田",
+      "fr": "champs Bagua",
+      "es": "campos Bagua",
+      "ko": "팔괘전",
+      "th": "ทุ่งปากั๋ว",
+      "aliases_zh": [
+        "八卦田"
+      ],
+      "aliases_en": [
+        "Bagua rice fields"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "source": "万峰林西峰林",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "xingyi",
+      "pack": "tourism",
+      "zh": "兴义",
+      "en": "Xingyi",
+      "ja": "興義",
+      "fr": "Xingyi",
+      "es": "Xingyi",
+      "ko": "싱이",
+      "th": "ซิงอี้",
+      "aliases_zh": [
+        "興義"
+      ],
+      "aliases_en": [
+        "Xingyi City"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "source": "贵州黔西南",
+      "reviewer": "待审定"
     }
   ]
 }
