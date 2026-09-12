@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""把本仓库同步到内网机 /opt/lsnu-outbound-assistant。密码只从 .deploy.env 或环境变量读。"""
+"""把本仓库同步到部署机 /opt/lsnu-outbound-assistant。密钥或密码只从 .deploy.env 读。"""
 from __future__ import annotations
 
 import os
@@ -26,12 +26,14 @@ def load_deploy_env() -> dict[str, str]:
                 continue
             key, value = line.split("=", 1)
             data[key.strip()] = value.strip().strip("'\"")
-    for key in ("DEPLOY_HOST", "DEPLOY_USER", "DEPLOY_PASS", "DEPLOY_PATH"):
+    for key in ("DEPLOY_HOST", "DEPLOY_USER", "DEPLOY_PASS", "DEPLOY_PATH", "DEPLOY_KEY"):
         if os.environ.get(key):
             data[key] = os.environ[key]
-    missing = [k for k in ("DEPLOY_HOST", "DEPLOY_USER", "DEPLOY_PASS", "DEPLOY_PATH") if not data.get(k)]
+    missing = [k for k in ("DEPLOY_HOST", "DEPLOY_USER", "DEPLOY_PATH") if not data.get(k)]
     if missing:
         raise SystemExit(f"缺少 {missing}，请写在 .deploy.env 或环境变量")
+    if not data.get("DEPLOY_PASS") and not data.get("DEPLOY_KEY"):
+        raise SystemExit("需要 DEPLOY_KEY 或 DEPLOY_PASS")
     return data
 
 
@@ -103,12 +105,25 @@ def remote_run(client: paramiko.SSHClient, cmd: str, timeout: int = 120) -> int:
 
 def main() -> int:
     cfg = load_deploy_env()
-    host, user, password, dest = cfg["DEPLOY_HOST"], cfg["DEPLOY_USER"], cfg["DEPLOY_PASS"], cfg["DEPLOY_PATH"]
+    host, user, dest = cfg["DEPLOY_HOST"], cfg["DEPLOY_USER"], cfg["DEPLOY_PATH"]
+    password = cfg.get("DEPLOY_PASS") or None
+    key_path = cfg.get("DEPLOY_KEY") or None
     print(f"deploy {host}:{dest} as {user}")
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(host, username=user, password=password, timeout=20, allow_agent=False, look_for_keys=False)
+    connect_kw = {
+        "hostname": host,
+        "username": user,
+        "timeout": 20,
+        "allow_agent": False,
+        "look_for_keys": False,
+    }
+    if key_path:
+        connect_kw["key_filename"] = str(Path(key_path).expanduser())
+    if password:
+        connect_kw["password"] = password
+    client.connect(**connect_kw)
     ensure_ssh_key(client)
     remote_run(client, f"mkdir -p {dest} && chmod 755 {dest}")
 
