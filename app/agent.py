@@ -186,7 +186,7 @@ def identify_from_image(mime: str, b64: str) -> tuple[dict, dict, str]:
             },
         ],
         max_tokens=900,
-        timeout=120,
+        timeout=180,
     )
     ident_raw = llm.parse_json_object(raw)
     return _normalize_ident(ident_raw), ident_raw, raw
@@ -215,7 +215,7 @@ def write_story(ident_raw: dict, raw: str, grounding: str) -> tuple[list[dict], 
             {"role": "user", "content": "请根据识图与检索写七语讲解。"},
         ],
         max_tokens=2200,
-        timeout=120,
+        timeout=180,
     )
     texts = llm.parse_json_object(story_raw)
     locked, hits = _lock_bundle({lang: texts.get(lang, "") or "" for lang in LANGS}, terms)

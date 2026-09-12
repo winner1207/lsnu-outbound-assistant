@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import agent
+from app import agent, imageutil
 from app.config import BRAND_DIR, MAX_UPLOAD_BYTES, STATIC_DIR
 
 app = FastAPI(title="乐师对外教学助手", version="1.0")
@@ -64,10 +64,11 @@ async def analyze_stream(file: UploadFile = File(...)):
         raise HTTPException(400, "图片是空的")
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(400, "图片请小于 10MB")
-    b64 = base64.b64encode(data).decode("ascii")
+    mime, b64, _n = imageutil.compress_for_vision(data, mime)
 
     def gen():
         try:
+            yield _sse({"type": "status", "step": "identify", "message": f"图片已压缩为 JPEG 再送视觉模型（{_n // 1024} KB）"})
             for ev in agent.iter_photo_progress(mime, b64):
                 yield _sse(ev)
         except Exception as exc:
@@ -92,7 +93,8 @@ async def analyze(file: UploadFile = File(...)):
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(400, "图片请小于 10MB")
     try:
-        ident, terms, intro, hits = agent.explain_photo(mime, base64.b64encode(data).decode("ascii"))
+        mime, b64, _n = imageutil.compress_for_vision(data, mime)
+        ident, terms, intro, hits = agent.explain_photo(mime, b64)
         return agent.create_session(ident, terms, intro, hits)
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc

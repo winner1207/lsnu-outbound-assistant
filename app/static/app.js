@@ -154,11 +154,14 @@ $("analyze").addEventListener("click", async () => {
         renderResult(ev.result);
         setStatus("完成");
       }
-      if (ev.type === "error") throw new Error(ev.message || "识别失败");
+      if (ev.type === "error") {
+        thinkAdd(ev.step || "identify", ev.message || "识别失败");
+        throw new Error(ev.message || "识别失败");
+      }
     });
   } catch (err) {
     setStatus(err.message || String(err));
-    thinkAdd("deliver", err.message || String(err));
+    thinkAdd("identify", err.message || String(err));
   } finally {
     $("analyze").disabled = false;
   }

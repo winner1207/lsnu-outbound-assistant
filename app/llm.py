@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 import re
+import socket
 import ssl
+import time
 import urllib.error
 import urllib.request
 
@@ -35,22 +37,41 @@ def _request(url: str, body: dict, timeout: int) -> dict:
         except json.JSONDecodeError:
             err = raw
         raise RuntimeError(f"LLM HTTP {exc.code}: {err}") from exc
+    except (TimeoutError, socket.timeout) as exc:
+        raise RuntimeError("模型响应超时，请稍后再试或换一张更小的图") from exc
+    except urllib.error.URLError as exc:
+        reason = getattr(exc, "reason", exc)
+        msg = str(reason)
+        if "timed out" in msg.lower() or "timeout" in msg.lower():
+            raise RuntimeError("模型响应超时，请稍后再试或换一张更小的图") from exc
+        raise RuntimeError(f"模型接口连不上：{reason}") from exc
     if payload.get("error"):
         raise RuntimeError(str(payload["error"]))
     return payload
 
 
-def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 120) -> str:
-    payload = _request(
-        f"{LLM_BASE_URL}/chat/completions",
-        {
-            "model": LLM_MODEL,
-            "messages": messages,
-            "temperature": 0.2,
-            "max_tokens": max_tokens,
-        },
-        timeout,
-    )
+def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, retries: int = 1) -> str:
+    last = None
+    for attempt in range(retries + 1):
+        try:
+            payload = _request(
+                f"{LLM_BASE_URL}/chat/completions",
+                {
+                    "model": LLM_MODEL,
+                    "messages": messages,
+                    "temperature": 0.2,
+                    "max_tokens": max_tokens,
+                },
+                timeout,
+            )
+            break
+        except RuntimeError as exc:
+            last = exc
+            if attempt >= retries or "超时" not in str(exc):
+                raise
+            time.sleep(1.2)
+    else:
+        raise last or RuntimeError("模型无返回")
     choices = payload.get("choices") or []
     if not choices:
         raise RuntimeError("模型无返回")
