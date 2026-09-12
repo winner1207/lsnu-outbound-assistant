@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEPLOY_ENV = ROOT / ".deploy.env"
 SKIP_DIRS = {".git", ".venv", "__pycache__", ".ssh", ".idea"}
 SKIP_FILES = {".deploy.env"}
+PRESERVE_REMOTE = {"data/glossary.json"}
 SKIP_NAME_PREFIX = ("_probe_host", "_switch_host", "_patch_", "_test_", "_sse", "_think", "_skip_")
 
 
@@ -133,6 +134,13 @@ def main() -> int:
         rel = path.relative_to(ROOT).as_posix()
         remote_path = posixpath.join(dest, rel)
         sftp_mkdirs(sftp, posixpath.dirname(remote_path))
+        if rel in PRESERVE_REMOTE:
+            try:
+                sftp.stat(remote_path)
+                print("keep", rel)
+                continue
+            except FileNotFoundError:
+                pass
         sftp.put(str(path), remote_path)
         mode = 0o600 if path.name == ".env" else (path.stat().st_mode & 0o777)
         sftp.chmod(remote_path, mode or 0o644)

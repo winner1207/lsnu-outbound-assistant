@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import agent, imageutil
+from app import agent, glossary, imageutil
 from app.config import BRAND_DIR, MAX_UPLOAD_BYTES, STATIC_DIR
 from app.sseutil import iter_with_keepalive, sse
 
@@ -37,6 +37,22 @@ class SceneIn(BaseModel):
 
 class TextIn(BaseModel):
     query: str = Field(min_length=1, max_length=200)
+
+
+class TermIn(BaseModel):
+    zh: str = Field(min_length=1, max_length=40)
+    en: str = ""
+    ja: str = ""
+    fr: str = ""
+    es: str = ""
+    ko: str = ""
+    th: str = ""
+    pack: str = "tourism"
+    scene: str = ""
+    region: str = Field(default="", max_length=40)
+    aliases_zh: list[str] = Field(default_factory=list)
+    source: str = Field(default="", max_length=80)
+    reviewer: str = Field(default="待审定", max_length=40)
 
 
 @app.get("/")
@@ -125,3 +141,35 @@ def chat(body: ChatIn):
         raise HTTPException(404, str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
+
+
+@app.get("/api/terms")
+def list_terms():
+    return glossary.public_catalog()
+
+
+@app.post("/api/terms")
+def add_term(body: TermIn):
+    try:
+        return glossary.create_term(body.model_dump())
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.put("/api/terms/{term_id}")
+def edit_term(term_id: str, body: TermIn):
+    try:
+        return glossary.update_term(term_id, body.model_dump())
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.delete("/api/terms/{term_id}")
+def remove_term(term_id: str):
+    try:
+        glossary.delete_term(term_id)
+        return {"ok": True, "id": term_id}
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc

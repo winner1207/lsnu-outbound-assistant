@@ -1,6 +1,10 @@
 const $ = (id) => document.getElementById(id);
 const LANGS = ["zh", "en", "ja", "fr", "es", "ko", "th"];
-const state = { sessionId: "", terms: [] };
+const state = { sessionId: "", terms: [], catalog: { terms: [], scenes: [], packs: [] }, editingId: "" };
+
+function escapeHtml(s) {
+  return String(s || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+}
 
 
 function thinkClear() {
@@ -75,7 +79,7 @@ function highlight(text, words) {
   ranges.sort((a, b) => a[0] - b[0]);
   let html = "";
   let cursor = 0;
-  const esc = (s) => s.replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
+  const esc = escapeHtml;
   for (const [start, end, word] of ranges) {
     html += esc(src.slice(cursor, start));
     html += `<mark>${esc(word)}</mark>`;
@@ -215,6 +219,148 @@ $("ask").addEventListener("submit", async (ev) => {
   }
 });
 
+
+function apiError(data, fallback) {
+  const detail = data && data.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail[0] && detail[0].msg) return detail[0].msg;
+  return fallback;
+}
+
+function fillSelect(node, items, extra) {
+  node.innerHTML = "";
+  (extra || []).forEach((item) => {
+    const opt = document.createElement("option");
+    opt.value = item.id;
+    opt.textContent = item.label_zh;
+    node.appendChild(opt);
+  });
+  (items || []).forEach((item) => {
+    const opt = document.createElement("option");
+    opt.value = item.id;
+    opt.textContent = item.label_zh;
+    node.appendChild(opt);
+  });
+}
+
+function renderTermList() {
+  const q = ($("term-q").value || "").trim().toLowerCase();
+  const rows = (state.catalog.terms || []).filter((t) => {
+    if (!q) return true;
+    return [t.zh, t.en, t.ja, t.id].some((x) => String(x || "").toLowerCase().includes(q));
+  });
+  if (!rows.length) {
+    $("term-list").innerHTML = `<p class="muted">${q ? "没有匹配的词条" : "词库是空的"}</p>`;
+    return;
+  }
+  $("term-list").innerHTML = `<table><thead><tr><th>中文</th><th>English</th><th>日本語</th><th>词包</th><th>审定</th></tr></thead><tbody>${rows.map((t) => {
+    const pack = (state.catalog.packs || []).find((p) => p.id === t.pack);
+    return `<tr data-id="${escapeHtml(t.id)}" class="${t.id === state.editingId ? "on" : ""}"><td>${escapeHtml(t.zh)}</td><td>${escapeHtml(t.en)}</td><td>${escapeHtml(t.ja)}</td><td>${escapeHtml((pack && pack.label_zh) || t.pack || "")}</td><td>${escapeHtml(t.reviewer || "")}</td></tr>`;
+  }).join("")}</tbody></table>`;
+}
+
+function showTermForm(term) {
+  state.editingId = (term && term.id) || "";
+  $("term-form").hidden = false;
+  $("term-id").value = state.editingId;
+  $("term-zh").value = (term && term.zh) || "";
+  LANGS.slice(1).forEach((lang) => {
+    $("term-" + lang).value = (term && term[lang]) || "";
+  });
+  $("term-pack").value = (term && term.pack) || "tourism";
+  $("term-scene").value = (term && term.scene) || "";
+  $("term-region").value = (term && term.region) || "";
+  $("term-aliases").value = ((term && term.aliases_zh) || []).join("，");
+  $("term-source").value = (term && term.source) || "";
+  $("term-reviewer").value = (term && term.reviewer) || "待审定";
+  $("term-del").hidden = !state.editingId;
+  $("term-status").textContent = state.editingId ? "正在编辑「" + (term.zh || "") + "」" : "新增词条";
+  renderTermList();
+  $("term-zh").focus();
+}
+
+function collectTerm() {
+  return {
+    zh: $("term-zh").value.trim(),
+    en: $("term-en").value.trim(),
+    ja: $("term-ja").value.trim(),
+    fr: $("term-fr").value.trim(),
+    es: $("term-es").value.trim(),
+    ko: $("term-ko").value.trim(),
+    th: $("term-th").value.trim(),
+    pack: $("term-pack").value,
+    scene: $("term-scene").value,
+    region: $("term-region").value.trim(),
+    aliases_zh: $("term-aliases").value.split(/[,，、]/).map((x) => x.trim()).filter(Boolean),
+    source: $("term-source").value.trim(),
+    reviewer: $("term-reviewer").value.trim() || "待审定",
+  };
+}
+
+async function loadCatalog() {
+  const res = await fetch("/api/terms");
+  const data = await res.json();
+  if (!res.ok) throw new Error(apiError(data, "读取词库失败"));
+  state.catalog = data;
+  fillSelect($("term-pack"), data.packs || []);
+  fillSelect($("term-scene"), data.scenes || [], [{ id: "", label_zh: "不指定" }]);
+  renderTermList();
+}
+
+$("term-q").addEventListener("input", renderTermList);
+$("term-new").addEventListener("click", () => showTermForm(null));
+$("term-list").addEventListener("click", (ev) => {
+  const row = ev.target.closest("tr[data-id]");
+  if (!row) return;
+  const term = (state.catalog.terms || []).find((t) => t.id === row.dataset.id);
+  if (term) showTermForm(term);
+});
+$("term-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const body = collectTerm();
+  if (!body.zh) {
+    $("term-status").textContent = "请填写中文专名";
+    return;
+  }
+  const editing = $("term-id").value;
+  $("term-status").textContent = "保存中…";
+  try {
+    const res = await fetch(editing ? "/api/terms/" + encodeURIComponent(editing) : "/api/terms", {
+      method: editing ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(apiError(data, "保存失败"));
+    await loadCatalog();
+    showTermForm(data);
+    $("term-status").textContent = "已保存";
+  } catch (err) {
+    $("term-status").textContent = err.message || String(err);
+  }
+});
+$("term-del").addEventListener("click", async () => {
+  const id = $("term-id").value;
+  const zh = $("term-zh").value.trim();
+  if (!id) return;
+  if (!window.confirm("确定删除「" + (zh || id) + "」？")) return;
+  $("term-status").textContent = "删除中…";
+  try {
+    const res = await fetch("/api/terms/" + encodeURIComponent(id), { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(apiError(data, "删除失败"));
+    await loadCatalog();
+    $("term-form").hidden = true;
+    state.editingId = "";
+    $("term-status").textContent = "已删除";
+    renderTermList();
+  } catch (err) {
+    $("term-status").textContent = err.message || String(err);
+  }
+});
+loadCatalog().catch((err) => {
+  $("term-list").innerHTML = `<p class="muted">${escapeHtml(err.message || String(err))}</p>`;
+});
 
 $("translate").addEventListener("click", async () => {
   const query = $("query").value.trim();

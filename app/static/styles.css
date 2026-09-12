@@ -101,3 +101,20 @@ footer { text-align: center; color: #7a7a7a; font-size: 12px; padding: 8px 16px 
 .think ol { margin: 8px 0 0; padding-left: 18px; max-height: 220px; overflow: auto; }
 .think li { font-size: 13px; color: #445; margin: 4px 0; line-height: 1.5; }
 .think li em { color: #888; font-style: normal; margin-right: 6px; }
+button.ghost { background: #fff; color: var(--blue); border: 1px solid var(--blue); }
+button.danger { background: var(--danger); }
+.term-table { overflow: auto; max-height: 280px; margin-top: 12px; }
+.term-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.term-table th, .term-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #f0e6d4; white-space: nowrap; }
+.term-table tbody tr { cursor: pointer; }
+.term-table tbody tr:hover { background: #f7fbff; }
+.term-table tbody tr.on { background: rgba(0,92,161,.08); }
+.term-form {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px;
+  margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--gold-2);
+}
+.term-form .span2, .term-form .row { grid-column: 1 / -1; }
+.term-form .field { margin-top: 0; }
+@media (max-width: 860px) {
+  .term-form { grid-template-columns: 1fr; }
+}

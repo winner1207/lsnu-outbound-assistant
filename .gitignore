@@ -7,3 +7,5 @@ __pycache__/
 _lsnu_home.html
 debug/
 .idea/
+*.json.tmp
+tests/_glossary_crud.json

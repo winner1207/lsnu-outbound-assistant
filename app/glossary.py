@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+import uuid
 from functools import lru_cache
 
 from app.config import GLOSSARY_PATH
@@ -14,6 +16,9 @@ FOLD = str.maketrans(
     "头云凌师载游处园乐寿苏时圆觉罗长门东坡处",
 )
 SKIP_OCR = ("美篇", "美篇号")
+PACKS = ("tourism", "campus")
+PACK_LABELS = {"tourism": "文旅", "campus": "校园"}
+_LOCK = threading.Lock()
 SCENES = (
     "leshan_buddha",
     "lingyun",
@@ -134,6 +139,114 @@ def _score(blob: str, name: str) -> int:
         if dist == 2 and len(name) >= 5:
             return 50
     return 0
+
+
+def public_catalog() -> dict:
+    data = load()
+    scenes = [{"id": key, "label_zh": (val or {}).get("label_zh") or key} for key, val in (data.get("scenes") or {}).items()]
+    return {
+        "terms": all_terms(),
+        "scenes": scenes,
+        "packs": [{"id": key, "label_zh": PACK_LABELS[key]} for key in PACKS],
+    }
+
+
+def _read_unlocked() -> dict:
+    return json.loads(GLOSSARY_PATH.read_text(encoding="utf-8"))
+
+
+def _write_unlocked(data: dict) -> None:
+    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    tmp = GLOSSARY_PATH.with_name(GLOSSARY_PATH.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(GLOSSARY_PATH)
+    load.cache_clear()
+
+
+def _clean_list(values: list | None) -> list[str]:
+    out, seen = [], set()
+    for raw in values or []:
+        item = str(raw).strip()
+        if item and item not in seen:
+            seen.add(item)
+            out.append(item)
+    return out
+
+
+def _validated(payload: dict, *, old: dict | None = None) -> dict:
+    zh = (payload.get("zh") or "").strip()
+    if not zh:
+        raise ValueError("中文专名不能为空")
+    pack = (payload.get("pack") or (old or {}).get("pack") or "tourism").strip()
+    if pack not in PACKS:
+        raise ValueError("未知词包")
+    scene = (payload.get("scene") or "").strip()
+    if scene and scene not in SCENES:
+        raise ValueError("未知场景")
+    term = dict(old or {})
+    term["zh"] = zh
+    term["pack"] = pack
+    for lang in LANGS:
+        if lang == "zh":
+            continue
+        term[lang] = (payload.get(lang) or "").strip()
+    term["aliases_zh"] = _clean_list(payload.get("aliases_zh"))
+    if scene:
+        term["scene"] = scene
+    else:
+        term.pop("scene", None)
+    region = (payload.get("region") or "").strip()
+    if region:
+        term["region"] = region
+    else:
+        term.pop("region", None)
+    term["source"] = (payload.get("source") or "").strip()
+    term["reviewer"] = (payload.get("reviewer") or "待审定").strip() or "待审定"
+    return term
+
+
+def create_term(payload: dict) -> dict:
+    with _LOCK:
+        data = _read_unlocked()
+        terms = data.setdefault("terms", [])
+        term = _validated(payload)
+        if any((item.get("zh") or "").strip() == term["zh"] for item in terms):
+            raise ValueError(f"已有专名「{term['zh']}」")
+        used = {item.get("id") for item in terms}
+        tid = "term-" + uuid.uuid4().hex[:10]
+        while tid in used:
+            tid = "term-" + uuid.uuid4().hex[:10]
+        term["id"] = tid
+        terms.append(term)
+        _write_unlocked(data)
+        return term
+
+
+def update_term(term_id: str, payload: dict) -> dict:
+    with _LOCK:
+        data = _read_unlocked()
+        terms = data.get("terms") or []
+        idx = next((i for i, item in enumerate(terms) if item.get("id") == term_id), None)
+        if idx is None:
+            raise KeyError("词条不存在")
+        term = _validated(payload, old=terms[idx])
+        term["id"] = term_id
+        if any((item.get("zh") or "").strip() == term["zh"] and item.get("id") != term_id for item in terms):
+            raise ValueError(f"已有专名「{term['zh']}」")
+        terms[idx] = term
+        _write_unlocked(data)
+        return term
+
+
+def delete_term(term_id: str) -> None:
+    with _LOCK:
+        data = _read_unlocked()
+        terms = data.get("terms") or []
+        kept = [item for item in terms if item.get("id") != term_id]
+        if len(kept) == len(terms):
+            raise KeyError("词条不存在")
+        data["terms"] = kept
+        _write_unlocked(data)
 
 
 def match_terms(texts: list[str]) -> list[tuple[dict, int]]:
