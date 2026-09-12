@@ -544,6 +544,7 @@
     {
       "id": "turn-back-shore",
       "pack": "tourism",
+      "scene": "inscription",
       "zh": "回头是岸",
       "en": "Repentance is the shore",
       "ja": "回頭是岸",
@@ -562,6 +563,7 @@
       "aliases_es": [],
       "aliases_ko": [],
       "aliases_th": [],
+      "region": "四川乐山凌云山",
       "source": "崖壁题刻，常从右到左读",
       "reviewer": "待审定"
     },
@@ -718,6 +720,109 @@
       "aliases_ko": [],
       "aliases_th": [],
       "source": "贵州黔西南",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "haitong-cave",
+      "pack": "tourism",
+      "scene": "inscription",
+      "zh": "海师洞",
+      "en": "Haitong Cave",
+      "ja": "海師洞",
+      "fr": "grotte Haitong",
+      "es": "cueva Haitong",
+      "ko": "해사동",
+      "th": "ถ้ำไห่ซือ",
+      "aliases_zh": [
+        "海師洞",
+        "海通洞"
+      ],
+      "aliases_en": [
+        "Master Hai Cave"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "region": "四川乐山凌云山",
+      "source": "乐山大佛景区，匾额常作繁体右起",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "zaijiu",
+      "pack": "tourism",
+      "scene": "inscription",
+      "zh": "载酒时游处",
+      "en": "Where Su Shi wandered with wine",
+      "ja": "載酒時遊処",
+      "fr": "lieu où Su Shi se promenait avec du vin",
+      "es": "lugar donde Su Shi paseaba con vino",
+      "ko": "재주시유처",
+      "th": "ที่เที่ยวพร้อมสุรา",
+      "aliases_zh": [
+        "載酒時遊處",
+        "载酒时游處",
+        "苏东坡载酒时游处"
+      ],
+      "aliases_en": [],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "region": "四川乐山凌云山",
+      "source": "凌云山摩崖，从右到左读",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "su-garden",
+      "pack": "tourism",
+      "scene": "inscription",
+      "zh": "苏园",
+      "en": "Su Garden",
+      "ja": "蘇園",
+      "fr": "jardin Su",
+      "es": "jardín Su",
+      "ko": "소원",
+      "th": "สวนซู",
+      "aliases_zh": [
+        "蘇園",
+        "苏圆",
+        "蘇圓"
+      ],
+      "aliases_en": [],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "region": "四川乐山凌云山",
+      "source": "凌云山园门匾额，从右到左读",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "le-zai-qi-zhong",
+      "pack": "tourism",
+      "scene": "inscription",
+      "zh": "乐在其中",
+      "en": "Joy lies within",
+      "ja": "楽在其中",
+      "fr": "le bonheur est en soi",
+      "es": "la alegría está en ello",
+      "ko": "낙재기중",
+      "th": "ความสุขอยู่ในนั้น",
+      "aliases_zh": [
+        "樂在其中"
+      ],
+      "aliases_en": [],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "region": "四川乐山凌云山",
+      "source": "凌云山摩崖",
       "reviewer": "待审定"
     }
   ]

@@ -3,7 +3,7 @@ set -euo pipefail
 DEST=/opt/lsnu-outbound-assistant
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y python3-venv python3-pip nginx
+apt-get install -y python3-venv python3-pip nginx libgl1 libglib2.0-0
 cd "$DEST"
 python3 -m venv .venv
 .venv/bin/pip install -U pip
@@ -17,7 +17,7 @@ systemctl daemon-reload
 systemctl enable --now lsnu-assistant
 systemctl restart lsnu-assistant
 systemctl reload nginx
-sleep 1
+sleep 3
 curl -fsS http://127.0.0.1:8000/api/health
 echo
 curl -fsS http://127.0.0.1/api/health

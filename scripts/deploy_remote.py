@@ -142,7 +142,7 @@ def main() -> int:
     print(f"uploaded {uploaded} files")
 
     remote_run(client, f"sed -i 's/\\r$//' {dest}/deploy/setup_remote.sh && chmod +x {dest}/deploy/setup_remote.sh")
-    code = remote_run(client, f"bash {dest}/deploy/setup_remote.sh", timeout=300)
+    code = remote_run(client, f"bash {dest}/deploy/setup_remote.sh", timeout=600)
     client.close()
     return code
 

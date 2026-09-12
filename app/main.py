@@ -68,8 +68,8 @@ async def analyze_stream(file: UploadFile = File(...)):
 
     def gen():
         try:
-            yield _sse({"type": "status", "step": "identify", "message": f"图片已压缩为 JPEG 再送视觉模型（{_n // 1024} KB）"})
-            for ev in agent.iter_photo_progress(mime, b64):
+            yield _sse({"type": "status", "step": "identify", "message": f"先识字，再送视觉模型（{_n // 1024} KB）"})
+            for ev in agent.iter_photo_progress(mime, b64, original=data):
                 yield _sse(ev)
         except Exception as exc:
             yield _sse({"type": "error", "message": str(exc)})
@@ -94,7 +94,7 @@ async def analyze(file: UploadFile = File(...)):
         raise HTTPException(400, "图片请小于 10MB")
     try:
         mime, b64, _n = imageutil.compress_for_vision(data, mime)
-        ident, terms, intro, hits = agent.explain_photo(mime, b64)
+        ident, terms, intro, hits = agent.explain_photo(mime, b64, original=data)
         return agent.create_session(ident, terms, intro, hits)
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
