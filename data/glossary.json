@@ -2,24 +2,59 @@
   "review_note": "对外常用译法草稿，须老师审定后去掉待审定标记。",
   "scenes": {
     "leshan_buddha": {
-      "label_zh": "乐山大佛",
-      "packs": ["tourism", "campus"]
+      "label_zh": "乐山大佛 / 佛语造像",
+      "packs": [
+        "tourism",
+        "campus"
+      ]
+    },
+    "lingyun": {
+      "label_zh": "凌云寺 / 凌云山",
+      "packs": [
+        "tourism",
+        "campus"
+      ]
     },
     "moruo": {
       "label_zh": "沫若 / 郭沫若相关",
-      "packs": ["tourism", "campus"]
+      "packs": [
+        "tourism",
+        "campus"
+      ]
     },
     "jiayang_train": {
       "label_zh": "嘉阳小火车",
-      "packs": ["tourism"]
+      "packs": [
+        "tourism"
+      ]
     },
     "campus": {
       "label_zh": "乐山师范学院校园",
-      "packs": ["campus", "tourism"]
+      "packs": [
+        "campus",
+        "tourism"
+      ]
+    },
+    "inscription": {
+      "label_zh": "匾额 / 楹联 / 碑刻 / 佛语",
+      "packs": [
+        "tourism",
+        "campus"
+      ]
+    },
+    "photo": {
+      "label_zh": "图中景物（随手拍）",
+      "packs": [
+        "tourism",
+        "campus"
+      ]
     },
     "unknown": {
       "label_zh": "无法确认",
-      "packs": ["campus"]
+      "packs": [
+        "tourism",
+        "campus"
+      ]
     }
   },
   "terms": [
@@ -29,10 +64,25 @@
       "zh": "乐山大佛",
       "en": "Leshan Giant Buddha",
       "ja": "楽山大仏",
-      "aliases_en": ["Leshan Buddha", "the Giant Buddha of Leshan", "Leshan Dafo"],
-      "aliases_ja": ["楽山の大仏", "楽山大佛"],
+      "aliases_en": [
+        "Leshan Buddha",
+        "the Giant Buddha of Leshan",
+        "Leshan Dafo"
+      ],
+      "aliases_ja": [
+        "楽山の大仏",
+        "楽山大佛"
+      ],
       "source": "常用对外译法",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "Grand Bouddha de Leshan",
+      "es": "Gran Buda de Leshan",
+      "aliases_fr": [
+        "Bouddha de Leshan"
+      ],
+      "aliases_es": [
+        "Buda de Leshan"
+      ]
     },
     {
       "id": "lsnu",
@@ -40,10 +90,24 @@
       "zh": "乐山师范学院",
       "en": "Leshan Normal University",
       "ja": "楽山師範学院",
-      "aliases_en": ["Leshan Teachers College", "Leshan Normal College", "LSNU"],
-      "aliases_ja": ["楽山師範大学"],
+      "aliases_en": [
+        "Leshan Teachers College",
+        "Leshan Normal College",
+        "LSNU"
+      ],
+      "aliases_ja": [
+        "楽山師範大学"
+      ],
       "source": "学校对外名称",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "Université normale de Leshan",
+      "es": "Universidad Normal de Leshan",
+      "aliases_fr": [
+        "Université de Leshan"
+      ],
+      "aliases_es": [
+        "Universidad de Leshan"
+      ]
     },
     {
       "id": "leshan",
@@ -51,10 +115,22 @@
       "zh": "乐山",
       "en": "Leshan",
       "ja": "楽山",
-      "aliases_en": ["Leshan City"],
-      "aliases_ja": ["楽山市"],
+      "aliases_en": [
+        "Leshan City"
+      ],
+      "aliases_ja": [
+        "楽山市"
+      ],
       "source": "地名",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "Leshan",
+      "es": "Leshan",
+      "aliases_fr": [
+        "ville de Leshan"
+      ],
+      "aliases_es": [
+        "ciudad de Leshan"
+      ]
     },
     {
       "id": "guo-moruo",
@@ -62,10 +138,20 @@
       "zh": "郭沫若",
       "en": "Guo Moruo",
       "ja": "郭沫若",
-      "aliases_en": ["Kuo Mo-jo", "Guo Mo Ruo", "Moruo Guo"],
-      "aliases_ja": ["かくまつじゃく"],
+      "aliases_en": [
+        "Kuo Mo-jo",
+        "Guo Mo Ruo",
+        "Moruo Guo"
+      ],
+      "aliases_ja": [
+        "かくまつじゃく"
+      ],
       "source": "人名规范译法",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "Guo Moruo",
+      "es": "Guo Moruo",
+      "aliases_fr": [],
+      "aliases_es": []
     },
     {
       "id": "moruo",
@@ -73,10 +159,17 @@
       "zh": "沫若",
       "en": "Moruo",
       "ja": "沫若",
-      "aliases_en": ["Mo Ruo", "Foam Ruo"],
+      "aliases_en": [
+        "Mo Ruo",
+        "Foam Ruo"
+      ],
       "aliases_ja": [],
       "source": "尊称/校本课程常用简称",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "Moruo",
+      "es": "Moruo",
+      "aliases_fr": [],
+      "aliases_es": []
     },
     {
       "id": "jiayang-train",
@@ -84,9 +177,49 @@
       "zh": "嘉阳小火车",
       "en": "Jiayang Steam Train",
       "ja": "嘉陽小型蒸気機関車",
-      "aliases_en": ["Jiayang Train", "Jiayang little train", "Kayang train"],
-      "aliases_ja": ["嘉陽小火車", "嘉陽トロッコ"],
+      "aliases_en": [
+        "Jiayang Train",
+        "Jiayang little train",
+        "Kayang train"
+      ],
+      "aliases_ja": [
+        "嘉陽小火車",
+        "嘉陽トロッコ"
+      ],
       "source": "文旅常用对外译法",
+      "reviewer": "待审定",
+      "fr": "petit train à vapeur de Jiayang",
+      "es": "tren de vapor de Jiayang",
+      "aliases_fr": [
+        "train de Jiayang"
+      ],
+      "aliases_es": [
+        "tren de Jiayang"
+      ]
+    },
+    {
+      "id": "lingyun-temple",
+      "pack": "tourism",
+      "zh": "凌云寺",
+      "en": "Lingyun Temple",
+      "ja": "凌雲寺",
+      "fr": "temple Lingyun",
+      "es": "templo Lingyun",
+      "aliases_zh": [
+        "凌雲寺"
+      ],
+      "aliases_en": [
+        "Lingyun Si",
+        "Lingyun Monastery"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [
+        "temple de Lingyun"
+      ],
+      "aliases_es": [
+        "templo de Lingyun"
+      ],
+      "source": "凌云山寺名，匾额常作繁体右起",
       "reviewer": "待审定"
     },
     {
@@ -95,10 +228,23 @@
       "zh": "凌云山",
       "en": "Lingyun Mountain",
       "ja": "凌雲山",
-      "aliases_en": ["Lingyun Shan"],
+      "aliases_en": [
+        "Lingyun Shan"
+      ],
       "aliases_ja": [],
       "source": "地名",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "mont Lingyun",
+      "es": "monte Lingyun",
+      "aliases_fr": [
+        "Lingyun Shan"
+      ],
+      "aliases_es": [
+        "montaña Lingyun"
+      ],
+      "aliases_zh": [
+        "凌雲山"
+      ]
     },
     {
       "id": "min-river",
@@ -106,10 +252,23 @@
       "zh": "岷江",
       "en": "Min River",
       "ja": "岷江",
-      "aliases_en": ["Minjiang River", "Min Jiang"],
-      "aliases_ja": ["みんこう"],
+      "aliases_en": [
+        "Minjiang River",
+        "Min Jiang"
+      ],
+      "aliases_ja": [
+        "みんこう"
+      ],
       "source": "地名",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "fleuve Min",
+      "es": "río Min",
+      "aliases_fr": [
+        "rivière Min"
+      ],
+      "aliases_es": [
+        "rio Min"
+      ]
     },
     {
       "id": "dadu-river",
@@ -117,10 +276,20 @@
       "zh": "大渡河",
       "en": "Dadu River",
       "ja": "大渡河",
-      "aliases_en": ["Dadu He"],
+      "aliases_en": [
+        "Dadu He"
+      ],
       "aliases_ja": [],
       "source": "地名",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "fleuve Dadu",
+      "es": "río Dadu",
+      "aliases_fr": [
+        "rivière Dadu"
+      ],
+      "aliases_es": [
+        "rio Dadu"
+      ]
     },
     {
       "id": "mount-emei",
@@ -128,10 +297,24 @@
       "zh": "峨眉山",
       "en": "Mount Emei",
       "ja": "峨眉山",
-      "aliases_en": ["Emei Mountain", "Mt. Emei", "Emeishan"],
-      "aliases_ja": ["がびさん"],
+      "aliases_en": [
+        "Emei Mountain",
+        "Mt. Emei",
+        "Emeishan"
+      ],
+      "aliases_ja": [
+        "がびさん"
+      ],
       "source": "地名",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "mont Emei",
+      "es": "monte Emei",
+      "aliases_fr": [
+        "montagne Emei"
+      ],
+      "aliases_es": [
+        "montaña Emei"
+      ]
     },
     {
       "id": "haitong",
@@ -139,10 +322,20 @@
       "zh": "海通和尚",
       "en": "Monk Haitong",
       "ja": "海通和尚",
-      "aliases_en": ["Haitong", "Monk Hai Tong"],
+      "aliases_en": [
+        "Monk Hai Tong"
+      ],
       "aliases_ja": [],
       "source": "大佛开凿传说人物",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "moine Haitong",
+      "es": "monje Haitong",
+      "aliases_fr": [
+        "Haitong"
+      ],
+      "aliases_es": [
+        "Haitong"
+      ]
     },
     {
       "id": "wuyou-temple",
@@ -150,10 +343,16 @@
       "zh": "乌尤寺",
       "en": "Wuyou Temple",
       "ja": "烏尤寺",
-      "aliases_en": ["Wuyou Si"],
+      "aliases_en": [
+        "Wuyou Si"
+      ],
       "aliases_ja": [],
       "source": "地名",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "temple Wuyou",
+      "es": "templo Wuyou",
+      "aliases_fr": [],
+      "aliases_es": []
     },
     {
       "id": "sichuan",
@@ -161,10 +360,23 @@
       "zh": "四川",
       "en": "Sichuan",
       "ja": "四川",
-      "aliases_en": ["Szechuan", "Szechwan"],
-      "aliases_ja": ["しせん"],
+      "aliases_en": [
+        "Szechuan",
+        "Szechwan"
+      ],
+      "aliases_ja": [
+        "しせん"
+      ],
       "source": "地名",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "Sichuan",
+      "es": "Sichuan",
+      "aliases_fr": [
+        "Sechuan"
+      ],
+      "aliases_es": [
+        "Szechuan"
+      ]
     },
     {
       "id": "teacher-education",
@@ -172,10 +384,16 @@
       "zh": "师范教育",
       "en": "teacher education",
       "ja": "師範教育",
-      "aliases_en": ["normal education"],
+      "aliases_en": [
+        "normal education"
+      ],
       "aliases_ja": [],
       "source": "办学定位用语",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "formation des enseignants",
+      "es": "formación docente",
+      "aliases_fr": [],
+      "aliases_es": []
     },
     {
       "id": "school-based-curriculum",
@@ -183,10 +401,16 @@
       "zh": "校本课程",
       "en": "school-based curriculum",
       "ja": "校本課程",
-      "aliases_en": ["school based course"],
+      "aliases_en": [
+        "school based course"
+      ],
       "aliases_ja": [],
       "source": "教学用语",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "fr": "programme scolaire local",
+      "es": "currículo propio de la escuela",
+      "aliases_fr": [],
+      "aliases_es": []
     }
   ]
 }

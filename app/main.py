@@ -56,8 +56,7 @@ async def analyze(file: UploadFile = File(...)):
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(400, "图片请小于 4MB")
     try:
-        ident = agent.identify_image(mime, base64.b64encode(data).decode("ascii"))
-        terms, intro, hits = agent.generate_intro(ident["scene"], ident["label_zh"])
+        ident, terms, intro, hits = agent.explain_photo(mime, base64.b64encode(data).decode("ascii"))
         return agent.create_session(ident, terms, intro, hits)
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc

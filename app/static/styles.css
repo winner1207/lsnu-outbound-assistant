@@ -70,6 +70,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   border-radius: 999px; padding: 2px 8px;
 }
 .langs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.langs article:nth-child(4),
+.langs article:nth-child(5) { grid-column: span 1; }
+.ocr { margin: 8px 0; padding: 8px 10px; background: #fff8e8; border-left: 3px solid var(--gold); font-size: 14px; }
 .langs article { background: #fbfaf6; border-left: 3px solid var(--gold); padding: 8px 12px; }
 .langs h3 { margin: 0 0 6px; font-size: 13px; color: var(--blue); }
 .langs p { margin: 0; white-space: pre-wrap; }
@@ -84,6 +87,9 @@ mark {
 #ask { width: 100%; }
 #ask input { flex: 1; }
 footer { text-align: center; color: #7a7a7a; font-size: 12px; padding: 8px 16px 28px; }
+@media (max-width: 1100px) {
+  .langs { grid-template-columns: 1fr 1fr; }
+}
 @media (max-width: 860px) {
   .layout, .langs, .steps { grid-template-columns: 1fr; }
   .logo { height: 48px; }

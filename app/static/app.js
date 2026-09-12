@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const LANGS = ["zh", "en", "ja", "fr", "es"];
 const state = { sessionId: "", terms: [] };
 
 function setStatus(text) {
@@ -16,19 +17,46 @@ function setSteps(active) {
 }
 
 function highlight(text, words) {
-  let html = String(text || "").replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
+  const src = String(text || "");
+  const ranges = [];
   const uniq = [...new Set(words || [])].filter(Boolean).sort((a, b) => b.length - a.length);
   for (const word of uniq) {
-    const safe = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    html = html.replace(new RegExp(safe, "g"), `<mark>${word}</mark>`);
+    let from = 0;
+    while (from <= src.length) {
+      const idx = src.indexOf(word, from);
+      if (idx < 0) break;
+      const end = idx + word.length;
+      const overlap = ranges.some((r) => !(end <= r[0] || idx >= r[1]));
+      if (!overlap) ranges.push([idx, end, word]);
+      from = idx + 1;
+    }
   }
+  ranges.sort((a, b) => a[0] - b[0]);
+  let html = "";
+  let cursor = 0;
+  const esc = (s) => s.replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
+  for (const [start, end, word] of ranges) {
+    html += esc(src.slice(cursor, start));
+    html += `<mark>${esc(word)}</mark>`;
+    cursor = end;
+  }
+  html += esc(src.slice(cursor));
   return html;
 }
 
 function renderResult(data) {
   state.sessionId = data.session_id;
   state.terms = data.term_table || [];
-  $("ident").textContent = `识别为「${data.label_zh}」（${data.scene}）${data.reason ? " · " + data.reason : ""}`;
+  const bits = [`识别为「${data.label_zh}」`];
+  if (data.in_photo) bits.push(data.in_photo);
+  if (data.reason) bits.push(data.reason);
+  $("ident").textContent = bits.join(" · ");
+  if (data.ocr_text) {
+    $("ocr").hidden = false;
+    $("ocr").textContent = `图中文字：${data.ocr_text}${data.ocr_note ? "（" + data.ocr_note + "）" : ""}`;
+  } else {
+    $("ocr").hidden = true;
+  }
   const select = $("scene");
   select.innerHTML = "";
   (data.scenes || []).forEach((scene) => {
@@ -39,22 +67,20 @@ function renderResult(data) {
     select.appendChild(opt);
   });
   select.disabled = false;
-  $("terms").innerHTML = state.terms
-    .map((t) => `<span>${t.zh} / ${t.en}</span>`)
-    .join("");
-  $("zh").innerHTML = highlight(data.intro.zh, data.locked_terms.zh);
-  $("en").innerHTML = highlight(data.intro.en, data.locked_terms.en);
-  $("ja").innerHTML = highlight(data.intro.ja, data.locked_terms.ja);
+  $("terms").innerHTML = state.terms.map((t) => `<span>${t.zh} / ${t.en}</span>`).join("");
+  LANGS.forEach((lang) => {
+    const hits = (data.locked_terms && data.locked_terms[lang]) || [];
+    $(lang).innerHTML = highlight((data.intro && data.intro[lang]) || "", hits);
+  });
   $("q").disabled = false;
   $("ask").querySelector("button").disabled = false;
-  $("chat").innerHTML = `<div class="msg bot">${highlight(data.intro.zh, data.locked_terms.zh)}</div>`;
+  $("chat").innerHTML = `<div class="msg bot">${highlight((data.intro && data.intro.zh) || "", (data.locked_terms && data.locked_terms.zh) || [])}</div>`;
 }
 
 $("file").addEventListener("change", () => {
   const file = $("file").files[0];
   if (!file) return;
-  const url = URL.createObjectURL(file);
-  $("preview").src = url;
+  $("preview").src = URL.createObjectURL(file);
   $("preview").hidden = false;
   $("hint").textContent = file.name;
 });
@@ -69,7 +95,7 @@ $("analyze").addEventListener("click", async () => {
   body.append("file", file);
   $("analyze").disabled = true;
   setSteps("identify");
-  setStatus("正在识别…");
+  setStatus("正在识字并讲解…");
   try {
     const res = await fetch("/api/analyze", { method: "POST", body });
     const data = await res.json();
@@ -116,10 +142,7 @@ $("ask").addEventListener("submit", async (ev) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "对话失败");
-    $("chat").insertAdjacentHTML(
-      "beforeend",
-      `<div class="msg bot">${highlight(data.reply, data.locked_terms)}</div>`
-    );
+    $("chat").insertAdjacentHTML("beforeend", `<div class="msg bot">${highlight(data.reply, data.locked_terms)}</div>`);
     $("chat").scrollTop = $("chat").scrollHeight;
   } catch (err) {
     setStatus(err.message || String(err));
