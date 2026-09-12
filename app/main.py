@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import base64
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -46,6 +47,37 @@ def index():
 @app.get("/api/health")
 def health():
     return {"ok": True, "name": "lsnu-outbound-assistant"}
+
+
+def _sse(event: dict) -> str:
+    return "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
+
+
+@app.post("/api/analyze/stream")
+async def analyze_stream(file: UploadFile = File(...)):
+    suffix = Path(file.filename or "").suffix.lower()
+    mime = MIME.get(suffix)
+    if not mime:
+        raise HTTPException(400, "请上传 jpg / png / webp 图片")
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "图片是空的")
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(400, "图片请小于 10MB")
+    b64 = base64.b64encode(data).decode("ascii")
+
+    def gen():
+        try:
+            for ev in agent.iter_photo_progress(mime, b64):
+                yield _sse(ev)
+        except Exception as exc:
+            yield _sse({"type": "error", "message": str(exc)})
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/api/analyze")

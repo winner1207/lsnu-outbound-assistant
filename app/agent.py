@@ -6,43 +6,54 @@ import time
 import uuid
 from typing import Any
 
-from app import glossary, llm
+from app import glossary, llm, search
 from app.lock import apply_lock
 
 SESSIONS: dict[str, dict[str, Any]] = {}
 MAX_SESSIONS = 40
 LANGS = glossary.LANGS
 
-EXPLAIN_PROMPT = """你是通用的多语种讲解 Agent，服务游客、留学生和随手拍照的人。
-输入永远是「用户此刻上传的这一张图」。不要用图库、文件名、预设景点名单去配对。
+IDENT_PROMPT = """你是通用讲解 Agent 的「识地」模块。只看用户此刻上传的这一张图。
+任务：抽出可用来检索地名的视觉指纹，并给出最可能的世界著名景点候选。不是从我们的测试图库配对。
 
-工作方式：
-1. 看图：如实描述画面（山、寺、塔、造像、题刻、人物、局部特写等）。
-2. 识字：读出能看清的文字。中文匾额/对联常从右到左或繁体竖排，按正确顺序转成规范简体。看不清用□，禁止编造没出现的经文或题字。
-3. 点名：仅在视觉证据足够时才给出具体地名/寺名/文物名（例如能看出是峨眉山金顶、乐山大佛、某块题刻）。证据不足就用画面描述当标题，不要猜。
-4. 故事：结合画面讲背景（历史、宗教、地理、参观注意），像现场导游。不确定的年代、传说写「请老师补充」。
-5. 专名锁定：讲解里若出现术语表中的专名，必须用表内对应译法，禁止乱译。
+请抓这些可区分特征：地貌（锥状喀斯特峰林 / 峰丛 / 丹霞 / 冰川 / 海岸）、农田形态（同心圆漏斗田 / 长条梯田 / 平坝）、建筑样式、题刻文字、独特构图。
+- 锥状喀斯特峰林 + 山间盆地同心圆稻田（漏斗/天坑状田心）：中国贵州兴义万峰林「八卦田」是最著名匹配之一；广西/云南峰林农田也要列入候选并说明差异。
+- 长条状梯田爬坡：更像元阳、龙脊，而不是八卦田。
+- 有足够把握就点名，不要因为怕说错而只写「山地田园」。
 
-label_zh 用画面短名，例如「峨眉山金顶」「崖壁题刻回头是岸」「白虎塑像」。
-scene 弱标签即可：photo / mountain / temple / statue / inscription / campus / unknown
+只返回 JSON：
+{
+  "in_photo": "一句话描述所见",
+  "ocr_text": "图中文字，没有则空",
+  "ocr_note": "读法",
+  "features": ["锥状喀斯特峰林", "同心圆稻田", "漏斗田心", "山脚村寨"],
+  "search_query": "用于维基检索的中文关键词",
+  "candidates": [{"name":"万峰林八卦田","region":"贵州兴义","confidence":0.86,"why":"峰林+同心圆稻田"}],
+  "label_zh": "最可能的短名",
+  "region": "省市区或国家",
+  "confidence": 0.86,
+  "reason": "依据画面哪一部分",
+  "scene": "photo"
+}"""
 
-术语表：
+STORY_PROMPT = """你是通用多语种讲解 Agent。下面是识图结果和检索摘要。请写七语导游讲解。
+识图：
+{ident_json}
+
+检索摘要（可能有噪音，只采纳与画面吻合的条目）：
+{grounding}
+
+术语锁定（出现这些专名时必须用表内译法）：
 {term_table}
 
-七语 zh en ja fr es ko th，每语 80–140 字。
+规则：
+- 标题用识图给出的地名；检索能印证则写清行政区（例如在贵州兴义万峰林）。
+- 先讲画面里看见的，再补地理/人文故事。
+- 检索与画面冲突时以画面为准，并写「请老师补充」。
+- 七语 zh en ja fr es ko th，每语 80–140 字。
 只返回 JSON：
-{{
-  "scene":"photo",
-  "label_zh":"画面短名",
-  "ocr_text":"图中文字，没有则空",
-  "ocr_note":"读法说明",
-  "in_photo":"一句话描述所见",
-  "related":true,
-  "confidence":0.0,
-  "reason":"判断依据来自画面哪一部分",
-  "zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."
-}}"""
-
+{{"zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
+"""
 
 KNOWN_FACTS = """已知讲解口径（与照片/专名相关时采用，不得编造相反内容）：
 - 乐山大佛下山虎：指景区内「龙湫虎穴」。下山虎是利用天然崖壁与古人崖墓形成的虎形景观，位于通往大佛的沿途。崖壁或塑像形似白虎下山，下方或附近为古人墓穴。
@@ -109,9 +120,17 @@ def _lock_bundle(texts: dict[str, str], terms: list[dict]) -> tuple[dict[str, st
 def _normalize_ident(data: dict) -> dict:
     scene = data.get("scene") if data.get("scene") in glossary.SCENES else "photo"
     meta = glossary.scene_meta(scene)
+    region = (data.get("region") or "").strip()
+    cands = data.get("candidates") or []
+    if not region and cands and isinstance(cands, list) and isinstance(cands[0], dict):
+        region = (cands[0].get("region") or "").strip()
+    label = (data.get("label_zh") or "").strip()
+    if not label and cands and isinstance(cands, list) and isinstance(cands[0], dict):
+        label = (cands[0].get("name") or "").strip()
     return {
         "scene": scene,
-        "label_zh": data.get("label_zh") or meta["label_zh"],
+        "label_zh": label or meta["label_zh"],
+        "region": region,
         "ocr_text": (data.get("ocr_text") or "").strip(),
         "ocr_note": (data.get("ocr_note") or "").strip(),
         "in_photo": (data.get("in_photo") or "").strip(),
@@ -154,34 +173,94 @@ def explain_text(query: str) -> tuple[dict, list[dict], dict[str, str], dict[str
     return ident, terms, locked, hits
 
 
-def explain_photo(mime: str, b64: str) -> tuple[dict, list[dict], dict[str, str], dict[str, list[str]]]:
-    terms = glossary.all_terms()
+def identify_from_image(mime: str, b64: str) -> tuple[dict, dict, str]:
     raw = llm.chat(
         [
-            {
-                "role": "system",
-                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms)),
-            },
+            {"role": "system", "content": IDENT_PROMPT},
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text",
-                        "text": "请只根据这张照片识读并讲解。不要套预设景点。若能明确认出（如峨眉山、乐山大佛）再点名。",
-                    },
+                    {"type": "text", "text": "识别这张照片最可能是哪里，并给出检索关键词。"},
                     {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
                 ],
             },
         ],
-        max_tokens=2800,
-        timeout=150,
+        max_tokens=900,
+        timeout=120,
     )
-    data = llm.parse_json_object(raw)
-    ident = _normalize_ident(data)
+    ident_raw = llm.parse_json_object(raw)
+    return _normalize_ident(ident_raw), ident_raw, raw
+
+
+def ground_ident(ident: dict, ident_raw: dict) -> tuple[str, str]:
+    query = ident_raw.get("search_query") or ident.get("label_zh") or ""
+    cands = ident_raw.get("candidates") or []
+    if cands and isinstance(cands, list) and isinstance(cands[0], dict) and cands[0].get("name"):
+        query = f"{cands[0].get('name')} {query}".strip()
+    return query, search.wiki_ground(query)
+
+
+def write_story(ident_raw: dict, raw: str, grounding: str) -> tuple[list[dict], dict[str, str], dict[str, list[str]]]:
     terms = glossary.all_terms()
-    texts = {lang: data.get(lang, "") or "" for lang in LANGS}
-    locked, hits = _lock_bundle(texts, terms)
-    return ident, terms, locked, hits
+    story_raw = llm.chat(
+        [
+            {
+                "role": "system",
+                "content": STORY_PROMPT.format(
+                    ident_json=raw if len(raw) < 1800 else str(ident_raw)[:1800],
+                    grounding=grounding or "（检索无结果，请仅依据画面与你的可靠地理知识；无把握则请老师补充）",
+                    term_table=glossary.term_table_for_prompt(terms),
+                ),
+            },
+            {"role": "user", "content": "请根据识图与检索写七语讲解。"},
+        ],
+        max_tokens=2200,
+        timeout=120,
+    )
+    texts = llm.parse_json_object(story_raw)
+    locked, hits = _lock_bundle({lang: texts.get(lang, "") or "" for lang in LANGS}, terms)
+    return terms, locked, hits
+
+
+def iter_photo_progress(mime: str, b64: str):
+    yield {"type": "status", "step": "identify", "message": "正在看图，抽取地貌与构图指纹…"}
+    ident, ident_raw, raw = identify_from_image(mime, b64)
+    features = ident_raw.get("features") or []
+    cands = ident_raw.get("candidates") or []
+    yield {
+        "type": "identify",
+        "step": "identify",
+        "ident": ident,
+        "features": features,
+        "candidates": cands,
+        "message": f"初步判断：{ident.get('label_zh') or '画面景物'}"
+        + (f"（{ident.get('region')}）" if ident.get("region") else ""),
+    }
+    yield {"type": "status", "step": "search", "message": "正在检索核对地名…"}
+    query, grounding = ground_ident(ident, ident_raw)
+    snippet = (grounding or "检索无结果，改用模型地理知识").replace("\n", " ")
+    yield {
+        "type": "search",
+        "step": "search",
+        "query": query,
+        "grounding": snippet[:600],
+        "message": f"检索：{query or '（无关键词）'}",
+    }
+    yield {"type": "status", "step": "story", "message": "正在撰写中英日法西韩泰讲解…"}
+    terms, locked, hits = write_story(ident_raw, raw, grounding)
+    payload = create_session(ident, terms, locked, hits)
+    yield {"type": "done", "step": "deliver", "result": payload, "message": "讲解完成"}
+
+
+def explain_photo(mime: str, b64: str) -> tuple[dict, list[dict], dict[str, str], dict[str, list[str]]]:
+    result = None
+    for ev in iter_photo_progress(mime, b64):
+        if ev.get("type") == "done":
+            result = ev["result"]
+    if not result:
+        raise RuntimeError("识图未完成")
+    session = SESSIONS[result["session_id"]]
+    return session["ident"], session["terms"], session["intro"], session["hits"]
 
 
 def generate_intro(ident: dict) -> tuple[list[dict], dict[str, str], dict[str, list[str]]]:
@@ -190,7 +269,7 @@ def generate_intro(ident: dict) -> tuple[list[dict], dict[str, str], dict[str, l
         [
             {
                 "role": "system",
-                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms)),
+                "content": STORY_PROMPT.format(ident_json=str(ident), grounding='（无检索）', term_table=glossary.term_table_for_prompt(terms)),
             },
             {
                 "role": "user",
@@ -255,6 +334,7 @@ def public_session(session: dict, extra: dict | None = None) -> dict:
         "ocr_text": session.get("ocr_text", ""),
         "ocr_note": session.get("ocr_note", ""),
         "in_photo": session.get("in_photo", ""),
+        "region": session.get("ident", {}).get("region", ""),
         "intro": session["intro"],
         "locked_terms": session["hits"],
         "term_table": [

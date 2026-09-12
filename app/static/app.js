@@ -2,12 +2,45 @@ const $ = (id) => document.getElementById(id);
 const LANGS = ["zh", "en", "ja", "fr", "es", "ko", "th"];
 const state = { sessionId: "", terms: [] };
 
+
+function thinkClear() {
+  $("think-log").innerHTML = "";
+  $("think-box").open = true;
+}
+
+function thinkAdd(step, message) {
+  const li = document.createElement("li");
+  const tag = { identify: "看图", search: "检索", story: "撰写", deliver: "完成" }[step] || step;
+  li.innerHTML = `<em>${tag}</em>${message || ""}`;
+  $("think-log").appendChild(li);
+  $("think-log").scrollTop = $("think-log").scrollHeight;
+}
+
+async function readSSE(res, onEvent) {
+  if (!res.body) throw new Error("浏览器不支持流式输出");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const chunks = buf.split("\n\n");
+    buf = chunks.pop();
+    for (const block of chunks) {
+      const line = block.split("\n").find((x) => x.startsWith("data: "));
+      if (!line) continue;
+      onEvent(JSON.parse(line.slice(6)));
+    }
+  }
+}
+
 function setStatus(text) {
   $("status").textContent = text;
 }
 
 function setSteps(active) {
-  const order = ["identify", "load", "lock", "deliver"];
+  const order = ["identify", "search", "story", "deliver"];
   const idx = order.indexOf(active);
   document.querySelectorAll(".steps li").forEach((li) => {
     const step = li.dataset.step;
@@ -47,7 +80,7 @@ function highlight(text, words) {
 function renderResult(data) {
   state.sessionId = data.session_id;
   state.terms = data.term_table || [];
-  const bits = [`识别为「${data.label_zh}」`];
+  const bits = [data.region ? `识别为「${data.label_zh}」（${data.region}）` : `识别为「${data.label_zh}」`];
   if (data.in_photo) bits.push(data.in_photo);
   if (data.reason) bits.push(data.reason);
   $("ident").textContent = bits.join(" · ");
@@ -94,17 +127,38 @@ $("analyze").addEventListener("click", async () => {
   const body = new FormData();
   body.append("file", file);
   $("analyze").disabled = true;
+  thinkClear();
   setSteps("identify");
-  setStatus("正在识字并讲解…");
+  setStatus("Agent 开始思考…");
+  thinkAdd("identify", "已提交图片，正在调用视觉模型");
   try {
-    const res = await fetch("/api/analyze", { method: "POST", body });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "识别失败");
-    setSteps("deliver");
-    renderResult(data);
-    setStatus("完成");
+    const res = await fetch("/api/analyze/stream", { method: "POST", body });
+    if (!res.ok) throw new Error("识别请求失败");
+    await readSSE(res, (ev) => {
+      if (ev.step) setSteps(ev.step);
+      if (ev.message) {
+        setStatus(ev.message);
+        thinkAdd(ev.step || "identify", ev.message);
+      }
+      if (ev.type === "identify" && ev.features && ev.features.length) {
+        thinkAdd("identify", "特征：" + ev.features.join("、"));
+      }
+      if (ev.type === "identify" && ev.candidates && ev.candidates.length) {
+        const names = ev.candidates.map((c) => `${c.name || ""} ${c.confidence != null ? c.confidence : ""}`.trim());
+        thinkAdd("identify", "候选：" + names.join("；"));
+      }
+      if (ev.type === "search" && ev.grounding) {
+        thinkAdd("search", ev.grounding.slice(0, 220));
+      }
+      if (ev.type === "done" && ev.result) {
+        renderResult(ev.result);
+        setStatus("完成");
+      }
+      if (ev.type === "error") throw new Error(ev.message || "识别失败");
+    });
   } catch (err) {
     setStatus(err.message || String(err));
+    thinkAdd("deliver", err.message || String(err));
   } finally {
     $("analyze").disabled = false;
   }
