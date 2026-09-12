@@ -141,16 +141,8 @@ def main() -> int:
     sftp.close()
     print(f"uploaded {uploaded} files")
 
-    remote_run(
-        client,
-        "python3 -c 'import venv,ensurepip' || (apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-venv python3-pip)",
-        timeout=180,
-    )
-    code = remote_run(
-        client,
-        f"cd {dest} && python3 -m venv .venv && .venv/bin/python scripts/test_llm.py",
-        timeout=180,
-    )
+    remote_run(client, f"sed -i 's/\\r$//' {dest}/deploy/setup_remote.sh && chmod +x {dest}/deploy/setup_remote.sh")
+    code = remote_run(client, f"bash {dest}/deploy/setup_remote.sh", timeout=300)
     client.close()
     return code
 

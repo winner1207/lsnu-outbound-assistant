@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>乐师对外教学助手</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="top">
+    <img class="logo" src="/brand/f_logo.png" alt="乐山师范学院">
+    <div>
+      <h1>对外教学助手</h1>
+      <p>校本术语锁定 · 识图讲解 · 中英日</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <h2>1. 上传图片</h2>
+      <label class="drop" for="file">
+        <input id="file" type="file" accept="image/jpeg,image/png,image/webp">
+        <img id="preview" alt="预览" hidden>
+        <span id="hint">选择乐山大佛、校园或文旅照片（jpg / png，小于 4MB）</span>
+      </label>
+      <div class="row">
+        <button id="analyze" type="button">识别并讲解</button>
+        <p id="status" class="muted"></p>
+      </div>
+      <label class="field">若识别不准，可手改场景
+        <select id="scene" disabled>
+          <option value="">先上传图片</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>2. 智能体四步</h2>
+      <ol class="steps" id="steps">
+        <li data-step="identify">分流 · 识景</li>
+        <li data-step="load">装载 · 术语包</li>
+        <li data-step="lock">锁定 · 专名</li>
+        <li data-step="deliver">交付 · 三语介绍</li>
+      </ol>
+      <p id="ident" class="muted">尚未识别。</p>
+      <div id="terms" class="terms"></div>
+    </section>
+
+    <section class="card wide">
+      <h2>3. 背景介绍</h2>
+      <div class="langs" id="langs">
+        <article><h3>中文</h3><p id="zh"></p></article>
+        <article><h3>English</h3><p id="en"></p></article>
+        <article><h3>日本語</h3><p id="ja"></p></article>
+      </div>
+    </section>
+
+    <section class="card wide">
+      <h2>4. 继续对话</h2>
+      <div id="chat" class="chat"></div>
+      <form id="ask" class="row">
+        <input id="q" type="text" placeholder="例如：带留学生参观时先讲哪一句？" autocomplete="off" disabled>
+        <button type="submit" disabled>发送</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    乐山师范学院 · 融合创新+，智绘乐师新征程 · 访问 http://公网IP 即可
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
