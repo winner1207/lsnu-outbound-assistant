@@ -11,7 +11,7 @@
     <img class="logo" src="/brand/f_logo.png" alt="乐山师范学院">
     <div>
       <h1>对外教学助手</h1>
-      <p>随手拍讲解 · 校本术语锁定 · 中英日法西</p>
+      <p>随手拍讲解 · 手动专名 · 中英日法西韩泰</p>
     </div>
   </header>
   <main class="layout">
@@ -31,6 +31,14 @@
           <option value="">先上传图片</option>
         </select>
       </label>
+      <div class="manual">
+        <label class="field">或手动输入专名（如：乐山大佛下山虎）
+          <input id="query" type="text" maxlength="80" placeholder="乐山大佛下山虎">
+        </label>
+        <div class="row">
+          <button id="translate" type="button">七语讲解</button>
+        </div>
+      </div>
     </section>
     <section class="card">
       <h2>2. 智能体四步</h2>
@@ -38,7 +46,7 @@
         <li data-step="identify">分流 · 识景识字</li>
         <li data-step="load">装载 · 术语包</li>
         <li data-step="lock">锁定 · 专名</li>
-        <li data-step="deliver">交付 · 五语讲解</li>
+        <li data-step="deliver">交付 · 七语讲解</li>
       </ol>
       <p id="ident" class="muted">尚未识别。</p>
       <p id="ocr" class="ocr" hidden></p>
@@ -52,6 +60,8 @@
         <article><h3>日本語</h3><p id="ja"></p></article>
         <article><h3>Français</h3><p id="fr"></p></article>
         <article><h3>Español</h3><p id="es"></p></article>
+        <article><h3>한국어</h3><p id="ko"></p></article>
+        <article><h3>ไทย</h3><p id="th"></p></article>
       </div>
     </section>
     <section class="card wide">

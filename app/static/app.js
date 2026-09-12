@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const LANGS = ["zh", "en", "ja", "fr", "es"];
+const LANGS = ["zh", "en", "ja", "fr", "es", "ko", "th"];
 const state = { sessionId: "", terms: [] };
 
 function setStatus(text) {
@@ -146,5 +146,33 @@ $("ask").addEventListener("submit", async (ev) => {
     $("chat").scrollTop = $("chat").scrollHeight;
   } catch (err) {
     setStatus(err.message || String(err));
+  }
+});
+
+
+$("translate").addEventListener("click", async () => {
+  const query = $("query").value.trim();
+  if (!query) {
+    setStatus("请输入专名，例如：乐山大佛下山虎");
+    return;
+  }
+  $("translate").disabled = true;
+  setSteps("identify");
+  setStatus("正在生成七语讲解…");
+  try {
+    const res = await fetch("/api/text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "讲解失败");
+    setSteps("deliver");
+    renderResult(data);
+    setStatus("完成");
+  } catch (err) {
+    setStatus(err.message || String(err));
+  } finally {
+    $("translate").disabled = false;
   }
 });

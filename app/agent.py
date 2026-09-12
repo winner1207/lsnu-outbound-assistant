@@ -22,9 +22,10 @@ EXPLAIN_PROMPT = """你是乐山师范学院对外讲解助手，给游客和留
 - 看见佛语、经句、题字：先把原文写出来，再解释大意。没看清的字用□，不要编造经文。
 
 scene 只用来装载术语包，必须选一个：
-leshan_buddha | lingyun | moruo | jiayang_train | campus | inscription | photo | unknown
+leshan_buddha | lingyun | xiashan_hu | moruo | jiayang_train | campus | inscription | photo | unknown
 - 凌云寺、凌云山、凌雲寺牌匾 → lingyun
-- 大佛本体、佛像局部、大佛上的佛语 → leshan_buddha
+- 大佛本体、佛像局部、大佛上的佛语、「佛」字题刻、回头是岸 → leshan_buddha
+- 下山虎、白虎塑像、龙湫虎穴、崖墓虎形 → xiashan_hu
 - 匾额楹联碑刻但地点一时难定 → inscription（仍要讲解文字）
 - 能讲画面但地点不在上述列表 → photo
 - 完全看不出内容才 unknown
@@ -32,7 +33,9 @@ leshan_buddha | lingyun | moruo | jiayang_train | campus | inscription | photo |
 必须逐字使用锁定术语（各语种对应译法，禁止意译专名）：
 {term_table}
 
-讲解用中、英、日、法、西五种语言。每语 80–160 字。不知道的事实写「请老师补充」。
+{facts}
+
+讲解用中、英、日、法、西、韩、泰七种语言。每语 80–140 字。不知道的事实写「请老师补充」。
 只返回 JSON：
 {{
   "scene":"lingyun",
@@ -47,9 +50,32 @@ leshan_buddha | lingyun | moruo | jiayang_train | campus | inscription | photo |
   "en":"...",
   "ja":"...",
   "fr":"...",
-  "es":"..."
+  "es":"...",
+  "ko":"...",
+  "th":"..."
 }}"""
 
+
+KNOWN_FACTS = """已知讲解口径（与照片/专名相关时采用，不得编造相反内容）：
+- 乐山大佛下山虎：指景区内「龙湫虎穴」。下山虎是利用天然崖壁与古人崖墓形成的虎形景观，位于通往大佛的沿途。崖壁或塑像形似白虎下山，下方或附近为古人墓穴。
+- 回头是岸：乐山大佛一带崖壁题刻，匾额常从右到左读作「回头是岸」。
+- 凌云寺：凌云山寺宇，牌匾繁体常作「凌雲寺」，从右到左读。
+"""
+
+TEXT_PROMPT = """你是乐山师范学院对外讲解助手。用户手动输入一个乐山/乐师相关专名或短语，请做七语讲解，并加一点当地故事。
+输入：{query}
+{facts}
+锁定术语必须逐字采用：
+{term_table}
+
+规则：
+- 先给规范译名，再讲它是什么、在哪、游客怎么看，像给留学生现场讲解。
+- 有已知口径的（如下山虎）按口径写，不要改成别的景点。
+- 不知道的年代数字写「请老师补充」，不要编造。
+- 七语：zh en ja fr es ko th。每语 80–140 字。
+只返回 JSON：
+{{"scene":"xiashan_hu","label_zh":"下山虎","reason":"一句话","zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
+"""
 CHAT_PROMPT = """你是乐山师范学院对外讲解助手。游客刚拍了一张照片，请围绕这张图继续回答。
 照片名称：{label_zh}
 图中文字：{ocr_text}
@@ -63,6 +89,10 @@ CHAT_PROMPT = """你是乐山师范学院对外讲解助手。游客刚拍了一
 def _guess_lang(text: str) -> str:
     if re.search(r"[\u3040-\u30ff]", text):
         return "ja"
+    if re.search(r"[\uac00-\ud7af]", text):
+        return "ko"
+    if re.search(r"[\u0e00-\u0e7f]", text):
+        return "th"
     if re.search(r"[àâçéèêëîïôùûüœÀÂÇÉÈÊËÎÏÔÙÛÜŒ]", text):
         return "fr"
     if re.search(r"[áéíóúñü¿¡ÁÉÍÓÚÑÜ]", text):
@@ -103,13 +133,46 @@ def _normalize_ident(data: dict) -> dict:
     }
 
 
+
+def explain_text(query: str) -> tuple[dict, list[dict], dict[str, str], dict[str, list[str]]]:
+    q = query.strip()
+    terms = glossary.terms_for_scene("photo")
+    raw = llm.chat(
+        [
+            {
+                "role": "system",
+                "content": TEXT_PROMPT.format(
+                    query=q,
+                    facts=KNOWN_FACTS,
+                    term_table=glossary.term_table_for_prompt(terms),
+                ),
+            },
+            {"role": "user", "content": q},
+        ],
+        max_tokens=2800,
+        timeout=120,
+    )
+    data = llm.parse_json_object(raw)
+    ident = _normalize_ident(data)
+    ident["label_zh"] = data.get("label_zh") or q
+    ident["in_photo"] = f"手动输入：{q}"
+    ident["ocr_text"] = q
+    ident["ocr_note"] = "手动翻译"
+    if ident["scene"] not in glossary.SCENES:
+        ident["scene"] = "photo"
+    terms = glossary.terms_for_scene(ident["scene"])
+    texts = {lang: data.get(lang, "") or "" for lang in LANGS}
+    locked, hits = _lock_bundle(texts, terms)
+    return ident, terms, locked, hits
+
+
 def explain_photo(mime: str, b64: str) -> tuple[dict, list[dict], dict[str, str], dict[str, list[str]]]:
     terms = glossary.terms_for_scene("photo")
     raw = llm.chat(
         [
             {
                 "role": "system",
-                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms)),
+                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms), facts=KNOWN_FACTS),
             },
             {
                 "role": "user",
@@ -122,7 +185,7 @@ def explain_photo(mime: str, b64: str) -> tuple[dict, list[dict], dict[str, str]
                 ],
             },
         ],
-        max_tokens=2200,
+        max_tokens=2800,
         timeout=150,
     )
     data = llm.parse_json_object(raw)
@@ -139,12 +202,12 @@ def generate_intro(ident: dict) -> tuple[list[dict], dict[str, str], dict[str, l
         [
             {
                 "role": "system",
-                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms)),
+                "content": EXPLAIN_PROMPT.format(term_table=glossary.term_table_for_prompt(terms), facts=KNOWN_FACTS),
             },
             {
                 "role": "user",
                 "content": (
-                    f"不看图，按已识读结果写五语讲解。\n"
+                    f"不看图，按已识读结果写七语讲解。\n"
                     f"名称：{ident.get('label_zh')}\n"
                     f"图中文字：{ident.get('ocr_text')}\n"
                     f"识读说明：{ident.get('ocr_note')}\n"
@@ -213,6 +276,8 @@ def public_session(session: dict, extra: dict | None = None) -> dict:
                 "ja": glossary.term_value(t, "ja"),
                 "fr": glossary.term_value(t, "fr"),
                 "es": glossary.term_value(t, "es"),
+                "ko": glossary.term_value(t, "ko"),
+                "th": glossary.term_value(t, "th"),
                 "reviewer": t.get("reviewer", ""),
             }
             for t in session["terms"]

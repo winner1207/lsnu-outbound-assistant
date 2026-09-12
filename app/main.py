@@ -34,6 +34,10 @@ class SceneIn(BaseModel):
     scene: str
 
 
+class TextIn(BaseModel):
+    query: str = Field(min_length=1, max_length=200)
+
+
 @app.get("/")
 def index():
     return FileResponse(STATIC_DIR / "index.html")
@@ -54,7 +58,7 @@ async def analyze(file: UploadFile = File(...)):
     if not data:
         raise HTTPException(400, "图片是空的")
     if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(400, "图片请小于 4MB")
+        raise HTTPException(400, "图片请小于 10MB")
     try:
         ident, terms, intro, hits = agent.explain_photo(mime, base64.b64encode(data).decode("ascii"))
         return agent.create_session(ident, terms, intro, hits)
@@ -70,6 +74,15 @@ def change_scene(body: SceneIn):
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
+@app.post("/api/text")
+def explain_text(body: TextIn):
+    try:
+        ident, terms, intro, hits = agent.explain_text(body.query)
+        return agent.create_session(ident, terms, intro, hits)
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
 

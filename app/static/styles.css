@@ -56,6 +56,7 @@ button {
   background: var(--blue); color: #fff; border: 0; cursor: pointer; font-weight: 700;
 }
 button:disabled { opacity: .5; cursor: not-allowed; }
+.manual { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--gold-2); }
 .field { display: grid; gap: 6px; margin-top: 12px; font-size: 13px; color: #555; }
 .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0; margin: 0 0 12px; }
 .steps li {
@@ -69,7 +70,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   font-size: 12px; background: rgba(235,186,100,.25); color: #6a4b12;
   border-radius: 999px; padding: 2px 8px;
 }
-.langs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.langs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .langs article:nth-child(4),
 .langs article:nth-child(5) { grid-column: span 1; }
 .ocr { margin: 8px 0; padding: 8px 10px; background: #fff8e8; border-left: 3px solid var(--gold); font-size: 14px; }

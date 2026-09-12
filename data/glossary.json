@@ -55,6 +55,13 @@
         "tourism",
         "campus"
       ]
+    },
+    "xiashan_hu": {
+      "label_zh": "下山虎 / 龙湫虎穴",
+      "packs": [
+        "tourism",
+        "campus"
+      ]
     }
   },
   "terms": [
@@ -82,7 +89,11 @@
       ],
       "aliases_es": [
         "Buda de Leshan"
-      ]
+      ],
+      "ko": "러산 대불",
+      "th": "พระพุทธรูปใหญ่เล่อซาน",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "lsnu",
@@ -107,7 +118,11 @@
       ],
       "aliases_es": [
         "Universidad de Leshan"
-      ]
+      ],
+      "ko": "러산사범대학",
+      "th": "มหาวิทยาลัยครุศาสตร์เล่อซาน",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "leshan",
@@ -130,7 +145,11 @@
       ],
       "aliases_es": [
         "ciudad de Leshan"
-      ]
+      ],
+      "ko": "러산",
+      "th": "เล่อซาน",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "guo-moruo",
@@ -151,7 +170,11 @@
       "fr": "Guo Moruo",
       "es": "Guo Moruo",
       "aliases_fr": [],
-      "aliases_es": []
+      "aliases_es": [],
+      "ko": "궈모뤄",
+      "th": "กัว มั่วรั่ว",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "moruo",
@@ -169,7 +192,11 @@
       "fr": "Moruo",
       "es": "Moruo",
       "aliases_fr": [],
-      "aliases_es": []
+      "aliases_es": [],
+      "ko": "모뤄",
+      "th": "มั่วรั่ว",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "jiayang-train",
@@ -195,7 +222,11 @@
       ],
       "aliases_es": [
         "tren de Jiayang"
-      ]
+      ],
+      "ko": "자양 증기기관차",
+      "th": "รถไฟไอน้ำเจียหยาง",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "lingyun-temple",
@@ -220,7 +251,11 @@
         "templo de Lingyun"
       ],
       "source": "凌云山寺名，匾额常作繁体右起",
-      "reviewer": "待审定"
+      "reviewer": "待审定",
+      "ko": "링윈사",
+      "th": "วัดหลิงอวิ๋น",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "lingyun-mountain",
@@ -244,7 +279,11 @@
       ],
       "aliases_zh": [
         "凌雲山"
-      ]
+      ],
+      "ko": "링윈산",
+      "th": "เขาหลิงอวิ๋น",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "min-river",
@@ -268,7 +307,11 @@
       ],
       "aliases_es": [
         "rio Min"
-      ]
+      ],
+      "ko": "민장강",
+      "th": "แม่น้ำหมิน",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "dadu-river",
@@ -289,7 +332,11 @@
       ],
       "aliases_es": [
         "rio Dadu"
-      ]
+      ],
+      "ko": "다두허",
+      "th": "แม่น้ำต้าตู้",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "mount-emei",
@@ -314,7 +361,11 @@
       ],
       "aliases_es": [
         "montaña Emei"
-      ]
+      ],
+      "ko": "어메이산",
+      "th": "เขาเอ๋อเหมย",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "haitong",
@@ -335,7 +386,11 @@
       ],
       "aliases_es": [
         "Haitong"
-      ]
+      ],
+      "ko": "해통 스님",
+      "th": "พระไห่ทง",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "wuyou-temple",
@@ -352,7 +407,11 @@
       "fr": "temple Wuyou",
       "es": "templo Wuyou",
       "aliases_fr": [],
-      "aliases_es": []
+      "aliases_es": [],
+      "ko": "우요우사",
+      "th": "วัดอูโยว",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "sichuan",
@@ -376,7 +435,11 @@
       ],
       "aliases_es": [
         "Szechuan"
-      ]
+      ],
+      "ko": "쓰촨",
+      "th": "เสฉวน",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "teacher-education",
@@ -393,7 +456,11 @@
       "fr": "formation des enseignants",
       "es": "formación docente",
       "aliases_fr": [],
-      "aliases_es": []
+      "aliases_es": [],
+      "ko": "사범교육",
+      "th": "การศึกษาครู",
+      "aliases_ko": [],
+      "aliases_th": []
     },
     {
       "id": "school-based-curriculum",
@@ -410,7 +477,129 @@
       "fr": "programme scolaire local",
       "es": "currículo propio de la escuela",
       "aliases_fr": [],
-      "aliases_es": []
+      "aliases_es": [],
+      "ko": "학교 교육과정",
+      "th": "หลักสูตรของสถานศึกษา",
+      "aliases_ko": [],
+      "aliases_th": []
+    },
+    {
+      "id": "xiashan-hu",
+      "pack": "tourism",
+      "zh": "下山虎",
+      "en": "Descending Tiger",
+      "ja": "下山の虎",
+      "fr": "Tigre descendant",
+      "es": "Tigre descendente",
+      "ko": "下山호",
+      "th": "พยัคฆ์ลงเขา",
+      "aliases_zh": [
+        "白虎下山"
+      ],
+      "aliases_en": [
+        "Tiger Descending the Mountain",
+        "Downhill Tiger"
+      ],
+      "aliases_ja": [
+        "白虎下山"
+      ],
+      "aliases_fr": [
+        "tigre qui descend la montagne"
+      ],
+      "aliases_es": [
+        "tigre que baja la montaña"
+      ],
+      "aliases_ko": [
+        "내려오는 호랑이"
+      ],
+      "aliases_th": [],
+      "source": "乐山大佛景区龙湫虎穴讲解口径",
+      "reviewer": "待审定",
+      "story_zh": "「乐山大佛下山虎」指景区内「龙湫虎穴」一景。下山虎是利用天然崖壁与古人崖墓形成的虎形景观，位于通往大佛的沿途。崖壁形似白虎下山，下方或附近为古人墓穴。"
+    },
+    {
+      "id": "longqiu-tiger-cave",
+      "pack": "tourism",
+      "zh": "龙湫虎穴",
+      "en": "Longqiu Tiger Cave",
+      "ja": "龍湫虎穴",
+      "fr": "grotte du Tigre de Longqiu",
+      "es": "cueva del Tigre de Longqiu",
+      "ko": "용추호혈",
+      "th": "ถ้ำพยัคฆ์หลงชิว",
+      "aliases_zh": [
+        "龍湫虎穴"
+      ],
+      "aliases_en": [
+        "Long Qiu Hu Xue"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "source": "乐山大佛景区沿途景点",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "turn-back-shore",
+      "pack": "tourism",
+      "zh": "回头是岸",
+      "en": "Repentance is the shore",
+      "ja": "回頭是岸",
+      "fr": "se retourner c'est déjà la rive",
+      "es": "volver la cabeza es la orilla",
+      "ko": "회두시안",
+      "th": "หันกลับคือฝั่ง",
+      "aliases_zh": [
+        "回頭是岸"
+      ],
+      "aliases_en": [
+        "Turn back and the shore is there"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "source": "崖壁题刻，常从右到左读",
+      "reviewer": "待审定"
+    },
+    {
+      "id": "su-shi",
+      "pack": "tourism",
+      "zh": "苏轼",
+      "en": "Su Shi",
+      "ja": "蘇軾",
+      "fr": "Su Shi",
+      "es": "Su Shi",
+      "ko": "소식",
+      "th": "ซู ซื่อ",
+      "aliases_zh": [
+        "苏东坡",
+        "蘇軾"
+      ],
+      "aliases_en": [
+        "Su Dongpo",
+        "Su Tung-p'o"
+      ],
+      "aliases_ja": [
+        "蘇東坡"
+      ],
+      "aliases_fr": [
+        "Sou Dongpo"
+      ],
+      "aliases_es": [
+        "Su Dongpo"
+      ],
+      "aliases_ko": [
+        "소동파"
+      ],
+      "aliases_th": [
+        "ซู ตงพัว"
+      ],
+      "source": "人名",
+      "reviewer": "待审定"
     }
   ]
 }

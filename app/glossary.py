@@ -6,12 +6,13 @@ from functools import lru_cache
 
 from app.config import GLOSSARY_PATH
 
-LANGS = ("zh", "en", "ja", "fr", "es")
+LANGS = ("zh", "en", "ja", "fr", "es", "ko", "th")
 SCENES = (
     "leshan_buddha",
     "lingyun",
     "moruo",
     "jiayang_train",
+    "xiashan_hu",
     "campus",
     "inscription",
     "photo",
@@ -41,7 +42,7 @@ def term_value(term: dict, lang: str) -> str:
 
 
 def term_table_for_prompt(terms: list[dict]) -> str:
-    lines = ["中文 | English | 日本語 | Français | Español"]
+    lines = ["中文 | English | 日本語 | Français | Español | 한국어 | ไทย"]
     for term in terms:
         lines.append(" | ".join(term_value(term, lang) for lang in LANGS))
     return "\n".join(lines)
