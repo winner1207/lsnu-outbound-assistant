@@ -39,6 +39,14 @@ function setStatus(text) {
   $("status").textContent = text;
 }
 
+function friendlyError(err) {
+  const raw = String((err && err.message) || err || "");
+  if (/network error|failed to fetch|load failed|networkerror/i.test(raw)) {
+    return "连接中断：七语讲解生成时间过长。请再试一次。";
+  }
+  return raw;
+}
+
 function setSteps(active) {
   const order = ["identify", "search", "story", "deliver"];
   const idx = order.indexOf(active);
@@ -160,8 +168,9 @@ $("analyze").addEventListener("click", async () => {
       }
     });
   } catch (err) {
-    setStatus(err.message || String(err));
-    thinkAdd("identify", err.message || String(err));
+    const msg = friendlyError(err);
+    setStatus(msg);
+    thinkAdd("identify", msg);
   } finally {
     $("analyze").disabled = false;
   }

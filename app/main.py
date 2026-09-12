@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import base64
-import json
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -12,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from app import agent, imageutil
 from app.config import BRAND_DIR, MAX_UPLOAD_BYTES, STATIC_DIR
+from app.sseutil import iter_with_keepalive, sse
 
 app = FastAPI(title="乐师对外教学助手", version="1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -49,10 +49,6 @@ def health():
     return {"ok": True, "name": "lsnu-outbound-assistant"}
 
 
-def _sse(event: dict) -> str:
-    return "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
-
-
 @app.post("/api/analyze/stream")
 async def analyze_stream(file: UploadFile = File(...)):
     suffix = Path(file.filename or "").suffix.lower()
@@ -66,16 +62,16 @@ async def analyze_stream(file: UploadFile = File(...)):
         raise HTTPException(400, "图片请小于 10MB")
     mime, b64, _n = imageutil.compress_for_vision(data, mime)
 
-    def gen():
+    def producer():
         try:
-            yield _sse({"type": "status", "step": "identify", "message": f"先识字，再送视觉模型（{_n // 1024} KB）"})
+            yield sse({"type": "status", "step": "identify", "message": f"先识字，再送视觉模型（{_n // 1024} KB）"})
             for ev in agent.iter_photo_progress(mime, b64, original=data):
-                yield _sse(ev)
+                yield sse(ev)
         except Exception as exc:
-            yield _sse({"type": "error", "message": str(exc)})
+            yield sse({"type": "error", "message": str(exc)})
 
     return StreamingResponse(
-        gen(),
+        iter_with_keepalive(producer),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
