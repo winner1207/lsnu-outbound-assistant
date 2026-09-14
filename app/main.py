@@ -13,7 +13,7 @@ from app import agent, glossary, imageutil
 from app.config import BRAND_DIR, MAX_UPLOAD_BYTES, STATIC_DIR
 from app.sseutil import iter_with_keepalive, sse
 
-app = FastAPI(title="乐师对外教学助手", version="1.0")
+app = FastAPI(title="乐山师范多语言智能解说", version="1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/brand", StaticFiles(directory=BRAND_DIR), name="brand")
 
