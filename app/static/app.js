@@ -283,9 +283,9 @@ function renderTermList() {
     $("term-list").innerHTML = `<p class="muted">${q ? "没有匹配的词条" : "词库是空的"}</p>`;
     return;
   }
-  $("term-list").innerHTML = `<table><thead><tr><th>中文</th><th>English</th><th>日本語</th><th>词包</th><th>审定</th></tr></thead><tbody>${rows.map((t) => {
+  $("term-list").innerHTML = `<table><thead><tr><th>中文</th><th>English</th><th>日本語</th><th>词包</th></tr></thead><tbody>${rows.map((t) => {
     const pack = (state.catalog.packs || []).find((p) => p.id === t.pack);
-    return `<tr data-id="${escapeHtml(t.id)}" class="${t.id === state.editingId ? "on" : ""}"><td>${escapeHtml(t.zh)}</td><td>${escapeHtml(t.en)}</td><td>${escapeHtml(t.ja)}</td><td>${escapeHtml((pack && pack.label_zh) || t.pack || "")}</td><td>${escapeHtml(t.reviewer || "")}</td></tr>`;
+    return `<tr data-id="${escapeHtml(t.id)}" class="${t.id === state.editingId ? "on" : ""}"><td>${escapeHtml(t.zh)}</td><td>${escapeHtml(t.en)}</td><td>${escapeHtml(t.ja)}</td><td>${escapeHtml((pack && pack.label_zh) || t.pack || "")}</td></tr>`;
   }).join("")}</tbody></table>`;
 }
 
