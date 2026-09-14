@@ -58,6 +58,17 @@ class MatchTermsTest(unittest.TestCase):
         texts = ocrutil.read_texts((PHOTO_DIR / "3.jpg").read_bytes())
         self.assertEqual(self._top(*texts), "回头是岸")
 
+    @unittest.skipUnless((PHOTO_DIR / "8.jpg").exists(), "no lsnu photo fixtures")
+    def test_photo_8_no_false_lock(self):
+        from app import ocrutil
+
+        texts = ocrutil.read_texts((PHOTO_DIR / "8.jpg").read_bytes())
+        hits = match_terms(texts)
+        names = [t["zh"] for t, _ in hits]
+        self.assertNotIn("乐山大佛", names)
+        self.assertNotIn("凌云寺", names)
+        self.assertNotIn("下山虎", names)
+
 
 if __name__ == "__main__":
     unittest.main()
