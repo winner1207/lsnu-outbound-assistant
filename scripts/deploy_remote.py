@@ -12,7 +12,7 @@ import paramiko
 ROOT = Path(__file__).resolve().parents[1]
 DEPLOY_ENV = ROOT / ".deploy.env"
 SKIP_DIRS = {".git", ".venv", "__pycache__", ".ssh", ".idea", "debug"}
-SKIP_FILES = {".deploy.env"}
+SKIP_FILES = {".deploy.env", ".env"}
 PRESERVE_REMOTE = {"data/glossary.json"}
 SKIP_NAME_PREFIX = ("_probe_host", "_switch_host", "_patch_", "_test_", "_sse", "_think", "_skip_")
 
