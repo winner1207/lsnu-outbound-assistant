@@ -52,6 +52,7 @@ def _request(url: str, body: dict, timeout: int) -> dict:
 
 def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, retries: int = 1, enable_search: bool = False) -> str:
     last = None
+    search_on = enable_search
     for attempt in range(retries + 1):
         try:
             body = {
@@ -60,12 +61,15 @@ def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, re
                 "temperature": 0.2,
                 "max_tokens": max_tokens,
             }
-            if enable_search:
+            if search_on:
                 body["enable_search"] = True
             payload = _request(f"{LLM_BASE_URL}/chat/completions", body, timeout)
             break
         except RuntimeError as exc:
             last = exc
+            if search_on and "HTTP 400" in str(exc):
+                search_on = False
+                continue
             if attempt >= retries or "超时" not in str(exc):
                 raise
             time.sleep(1.2)
@@ -137,6 +141,21 @@ def _delta_text(payload: dict) -> str:
     return str(content)
 
 
+def _stream_request(body: dict, timeout: int) -> urllib.request.Request:
+    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    return urllib.request.Request(
+        f"{LLM_BASE_URL}/chat/completions",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {LLM_API_KEY}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+            "User-Agent": "lsnu-outbound-assistant/1.0",
+        },
+        method="POST",
+    )
+
+
 def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, enable_search: bool = False):
     if not LLM_BASE_URL or not LLM_API_KEY:
         raise RuntimeError("未配置 LLM_BASE_URL / LLM_API_KEY")
@@ -149,28 +168,27 @@ def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 
     }
     if enable_search:
         body["enable_search"] = True
-    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(
-        f"{LLM_BASE_URL}/chat/completions",
-        data=data,
-        headers={
-            "Authorization": f"Bearer {LLM_API_KEY}",
-            "Content-Type": "application/json",
-            "Accept": "text/event-stream",
-            "User-Agent": "lsnu-outbound-assistant/1.0",
-        },
-        method="POST",
-    )
+    req = _stream_request(body, timeout)
     ctx = ssl.create_default_context()
     try:
         resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
     except urllib.error.HTTPError as exc:
-        raw = exc.read().decode("utf-8", errors="replace")
-        try:
-            err = json.loads(raw)
-        except json.JSONDecodeError:
-            err = raw
-        raise RuntimeError(f"LLM HTTP {exc.code}: {err}") from exc
+        if enable_search and exc.code == 400:
+            body.pop("enable_search", None)
+            req = _stream_request(body, timeout)
+            try:
+                resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
+            except urllib.error.HTTPError as exc2:
+                exc = exc2
+            else:
+                exc = None
+        if exc is not None:
+            raw = exc.read().decode("utf-8", errors="replace")
+            try:
+                err = json.loads(raw)
+            except json.JSONDecodeError:
+                err = raw
+            raise RuntimeError(f"LLM HTTP {exc.code}: {err}") from exc
     except (TimeoutError, socket.timeout) as exc:
         raise RuntimeError("模型响应超时，请稍后再试或换一张更小的图") from exc
     except urllib.error.URLError as exc:
