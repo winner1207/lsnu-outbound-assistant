@@ -52,7 +52,7 @@ class TermIn(BaseModel):
     region: str = Field(default="", max_length=40)
     aliases_zh: list[str] = Field(default_factory=list)
     source: str = Field(default="", max_length=80)
-    reviewer: str = Field(default="待审定", max_length=40)
+    reviewer: str = Field(default="", max_length=40)
 
 
 @app.get("/")
@@ -80,7 +80,7 @@ async def analyze_stream(file: UploadFile = File(...)):
 
     def producer():
         try:
-            yield sse({"type": "status", "step": "identify", "message": f"先识字，再送视觉模型（{_n // 1024} KB）"})
+            yield sse({"type": "status", "step": "identify", "message": f"正在处理图片（{_n // 1024} KB）"})
             for ev in agent.iter_photo_progress(mime, b64, original=data):
                 yield sse(ev)
         except Exception as exc:

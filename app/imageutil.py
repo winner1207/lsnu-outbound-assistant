@@ -6,7 +6,6 @@ from io import BytesIO
 
 
 def compress_for_vision(data: bytes, mime: str, *, max_side: int = 1280, quality: int = 80) -> tuple[str, str, int]:
-    """缩小后转 JPEG，降低视觉接口超时概率。返回 mime, b64, 压缩后字节数。"""
     try:
         from PIL import Image
     except ImportError:

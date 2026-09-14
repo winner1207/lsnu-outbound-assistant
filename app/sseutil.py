@@ -13,7 +13,6 @@ def sse(event: dict[str, Any]) -> str:
 
 
 def iter_with_keepalive(producer: Callable[[], Iterator[str]], interval: float = 15.0) -> Iterator[str]:
-    """阻塞的上游（识字 / 模型）期间仍向 nginx 推数据，避免 proxy_read_timeout。"""
     q: queue.Queue[tuple[str, object]] = queue.Queue()
 
     def run() -> None:

@@ -11,7 +11,7 @@
     <img class="logo" src="/brand/f_logo.png" alt="乐山师范学院">
     <div>
       <h1>对外教学助手</h1>
-      <p>通用识图讲解 Agent · 七语 · 专名锁定</p>
+      <p>识图讲解 · 七语 · 专名锁定</p>
     </div>
   </header>
   <main class="layout">
@@ -40,7 +40,7 @@
       </div>
     </section>
     <section class="card">
-      <h2>2. 智能体四步</h2>
+      <h2>2. 处理步骤</h2>
       <ol class="steps" id="steps">
         <li data-step="identify">看图 · 抽特征</li>
         <li data-step="search">检索 · 核对地名</li>
@@ -48,7 +48,7 @@
         <li data-step="deliver">交付 · 完成</li>
       </ol>
       <details class="think" id="think-box" open>
-        <summary>思考过程</summary>
+        <summary>处理记录</summary>
         <ol id="think-log"></ol>
       </details>
       <p id="ident" class="muted">尚未识别。</p>
@@ -77,7 +77,7 @@
     </section>
     <section class="card wide">
       <h2>5. 校本术语</h2>
-      <p class="muted">老师可在此增删改专名。保存后立即写入词库，下次识图 / 讲解按新表锁定。</p>
+      <p class="muted">维护专名及译法，保存后立即生效。</p>
       <div class="row">
         <input id="term-q" type="text" placeholder="筛选中文 / 英文 / 日文" maxlength="40">
         <button id="term-new" type="button" class="ghost">新增</button>
@@ -115,14 +115,14 @@
         <label class="field">地名 / 区域
           <input id="term-region" type="text" maxlength="40" placeholder="四川乐山凌云山">
         </label>
-        <label class="field span2">中文别名（逗号分隔，用于识字命中）
+        <label class="field span2">中文别名
           <input id="term-aliases" type="text" maxlength="120" placeholder="回頭是岸">
         </label>
         <label class="field">来源
           <input id="term-source" type="text" maxlength="80">
         </label>
         <label class="field">审定
-          <input id="term-reviewer" type="text" maxlength="40" placeholder="待审定">
+          <input id="term-reviewer" type="text" maxlength="40">
         </label>
         <div class="row span2">
           <button type="submit">保存</button>

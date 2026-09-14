@@ -1,5 +1,4 @@
 {
-  "review_note": "对外常用译法草稿，须老师审定后去掉待审定标记。",
   "scenes": {
     "leshan_buddha": {
       "label_zh": "乐山大佛 / 佛语造像",
@@ -81,7 +80,6 @@
         "楽山大佛"
       ],
       "source": "常用对外译法",
-      "reviewer": "待审定",
       "fr": "Grand Bouddha de Leshan",
       "es": "Gran Buda de Leshan",
       "aliases_fr": [
@@ -110,7 +108,6 @@
         "楽山師範大学"
       ],
       "source": "学校对外名称",
-      "reviewer": "待审定",
       "fr": "Université normale de Leshan",
       "es": "Universidad Normal de Leshan",
       "aliases_fr": [
@@ -137,7 +134,6 @@
         "楽山市"
       ],
       "source": "地名",
-      "reviewer": "待审定",
       "fr": "Leshan",
       "es": "Leshan",
       "aliases_fr": [
@@ -166,7 +162,6 @@
         "かくまつじゃく"
       ],
       "source": "人名规范译法",
-      "reviewer": "待审定",
       "fr": "Guo Moruo",
       "es": "Guo Moruo",
       "aliases_fr": [],
@@ -188,7 +183,6 @@
       ],
       "aliases_ja": [],
       "source": "尊称/校本课程常用简称",
-      "reviewer": "待审定",
       "fr": "Moruo",
       "es": "Moruo",
       "aliases_fr": [],
@@ -214,7 +208,6 @@
         "嘉陽トロッコ"
       ],
       "source": "文旅常用对外译法",
-      "reviewer": "待审定",
       "fr": "petit train à vapeur de Jiayang",
       "es": "tren de vapor de Jiayang",
       "aliases_fr": [
@@ -251,7 +244,6 @@
         "templo de Lingyun"
       ],
       "source": "凌云山寺名，匾额常作繁体右起",
-      "reviewer": "待审定",
       "ko": "링윈사",
       "th": "วัดหลิงอวิ๋น",
       "aliases_ko": [],
@@ -268,7 +260,6 @@
       ],
       "aliases_ja": [],
       "source": "地名",
-      "reviewer": "待审定",
       "fr": "mont Lingyun",
       "es": "monte Lingyun",
       "aliases_fr": [
@@ -299,7 +290,6 @@
         "みんこう"
       ],
       "source": "地名",
-      "reviewer": "待审定",
       "fr": "fleuve Min",
       "es": "río Min",
       "aliases_fr": [
@@ -324,7 +314,6 @@
       ],
       "aliases_ja": [],
       "source": "地名",
-      "reviewer": "待审定",
       "fr": "fleuve Dadu",
       "es": "río Dadu",
       "aliases_fr": [
@@ -353,7 +342,6 @@
         "がびさん"
       ],
       "source": "地名",
-      "reviewer": "待审定",
       "fr": "mont Emei",
       "es": "monte Emei",
       "aliases_fr": [
@@ -378,7 +366,6 @@
       ],
       "aliases_ja": [],
       "source": "大佛开凿传说人物",
-      "reviewer": "待审定",
       "fr": "moine Haitong",
       "es": "monje Haitong",
       "aliases_fr": [
@@ -403,7 +390,6 @@
       ],
       "aliases_ja": [],
       "source": "地名",
-      "reviewer": "待审定",
       "fr": "temple Wuyou",
       "es": "templo Wuyou",
       "aliases_fr": [],
@@ -427,7 +413,6 @@
         "しせん"
       ],
       "source": "地名",
-      "reviewer": "待审定",
       "fr": "Sichuan",
       "es": "Sichuan",
       "aliases_fr": [
@@ -452,7 +437,6 @@
       ],
       "aliases_ja": [],
       "source": "办学定位用语",
-      "reviewer": "待审定",
       "fr": "formation des enseignants",
       "es": "formación docente",
       "aliases_fr": [],
@@ -473,7 +457,6 @@
       ],
       "aliases_ja": [],
       "source": "教学用语",
-      "reviewer": "待审定",
       "fr": "programme scolaire local",
       "es": "currículo propio de la escuela",
       "aliases_fr": [],
@@ -514,7 +497,6 @@
       ],
       "aliases_th": [],
       "source": "乐山大佛景区龙湫虎穴讲解口径",
-      "reviewer": "待审定",
       "story_zh": "「乐山大佛下山虎」指景区内「龙湫虎穴」一景。下山虎是利用天然崖壁与古人崖墓形成的虎形景观，位于通往大佛的沿途。崖壁形似白虎下山，下方或附近为古人墓穴。"
     },
     {
@@ -538,8 +520,7 @@
       "aliases_es": [],
       "aliases_ko": [],
       "aliases_th": [],
-      "source": "乐山大佛景区沿途景点",
-      "reviewer": "待审定"
+      "source": "乐山大佛景区沿途景点"
     },
     {
       "id": "turn-back-shore",
@@ -564,8 +545,7 @@
       "aliases_ko": [],
       "aliases_th": [],
       "region": "四川乐山凌云山",
-      "source": "崖壁题刻，常从右到左读",
-      "reviewer": "待审定"
+      "source": "崖壁题刻，常从右到左读"
     },
     {
       "id": "su-shi",
@@ -600,8 +580,7 @@
       "aliases_th": [
         "ซู ตงพัว"
       ],
-      "source": "人名",
-      "reviewer": "待审定"
+      "source": "人名"
     },
     {
       "id": "golden-summit",
@@ -624,8 +603,7 @@
       "aliases_es": [],
       "aliases_ko": [],
       "aliases_th": [],
-      "source": "峨眉山",
-      "reviewer": "待审定"
+      "source": "峨眉山"
     },
     {
       "id": "baoguo-temple",
@@ -646,8 +624,7 @@
       "aliases_es": [],
       "aliases_ko": [],
       "aliases_th": [],
-      "source": "峨眉山",
-      "reviewer": "待审定"
+      "source": "峨眉山"
     },
     {
       "id": "wanfenglin",
@@ -671,8 +648,7 @@
       "aliases_es": [],
       "aliases_ko": [],
       "aliases_th": [],
-      "source": "贵州兴义",
-      "reviewer": "待审定"
+      "source": "贵州兴义"
     },
     {
       "id": "bagua-fields",
@@ -695,8 +671,7 @@
       "aliases_es": [],
       "aliases_ko": [],
       "aliases_th": [],
-      "source": "万峰林西峰林",
-      "reviewer": "待审定"
+      "source": "万峰林西峰林"
     },
     {
       "id": "xingyi",
@@ -719,8 +694,7 @@
       "aliases_es": [],
       "aliases_ko": [],
       "aliases_th": [],
-      "source": "贵州黔西南",
-      "reviewer": "待审定"
+      "source": "贵州黔西南"
     },
     {
       "id": "haitong-cave",
@@ -746,8 +720,7 @@
       "aliases_ko": [],
       "aliases_th": [],
       "region": "四川乐山凌云山",
-      "source": "乐山大佛景区，匾额常作繁体右起",
-      "reviewer": "待审定"
+      "source": "乐山大佛景区，匾额常作繁体右起"
     },
     {
       "id": "zaijiu",
@@ -772,8 +745,7 @@
       "aliases_ko": [],
       "aliases_th": [],
       "region": "四川乐山凌云山",
-      "source": "凌云山摩崖，从右到左读",
-      "reviewer": "待审定"
+      "source": "凌云山摩崖，从右到左读"
     },
     {
       "id": "su-garden",
@@ -798,8 +770,7 @@
       "aliases_ko": [],
       "aliases_th": [],
       "region": "四川乐山凌云山",
-      "source": "凌云山园门匾额，从右到左读",
-      "reviewer": "待审定"
+      "source": "凌云山园门匾额，从右到左读"
     },
     {
       "id": "le-zai-qi-zhong",
@@ -822,8 +793,7 @@
       "aliases_ko": [],
       "aliases_th": [],
       "region": "四川乐山凌云山",
-      "source": "凌云山摩崖",
-      "reviewer": "待审定"
+      "source": "凌云山摩崖"
     }
   ]
 }

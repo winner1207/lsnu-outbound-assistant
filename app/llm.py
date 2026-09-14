@@ -27,7 +27,6 @@ def _request(url: str, body: dict, timeout: int) -> dict:
         method="POST",
     )
     ctx = ssl.create_default_context()
-    t0 = time.time()
     try:
         with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
             payload = json.loads(resp.read().decode("utf-8", errors="replace"))
@@ -37,22 +36,17 @@ def _request(url: str, body: dict, timeout: int) -> dict:
             err = json.loads(raw)
         except json.JSONDecodeError:
             err = raw
-        print(f"[llm] HTTP {exc.code} after {time.time() - t0:.1f}s", flush=True)
         raise RuntimeError(f"LLM HTTP {exc.code}: {err}") from exc
     except (TimeoutError, socket.timeout) as exc:
-        print(f"[llm] timeout after {time.time() - t0:.1f}s", flush=True)
         raise RuntimeError("模型响应超时，请稍后再试或换一张更小的图") from exc
     except urllib.error.URLError as exc:
         reason = getattr(exc, "reason", exc)
         msg = str(reason)
-        print(f"[llm] urlerror after {time.time() - t0:.1f}s: {reason}", flush=True)
         if "timed out" in msg.lower() or "timeout" in msg.lower():
             raise RuntimeError("模型响应超时，请稍后再试或换一张更小的图") from exc
         raise RuntimeError(f"模型接口连不上：{reason}") from exc
     if payload.get("error"):
-        print(f"[llm] error after {time.time() - t0:.1f}s: {payload['error']}", flush=True)
         raise RuntimeError(str(payload["error"]))
-    print(f"[llm] ok in {time.time() - t0:.1f}s model={LLM_MODEL}", flush=True)
     return payload
 
 

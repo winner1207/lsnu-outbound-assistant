@@ -141,8 +141,8 @@ $("analyze").addEventListener("click", async () => {
   $("analyze").disabled = true;
   thinkClear();
   setSteps("identify");
-  setStatus("Agent 开始思考…");
-  thinkAdd("identify", "已提交图片，正在调用视觉模型");
+  setStatus("正在识别…");
+  thinkAdd("identify", "已提交图片");
   try {
     const res = await fetch("/api/analyze/stream", { method: "POST", body });
     if (!res.ok) throw new Error("识别请求失败");
@@ -272,7 +272,7 @@ function showTermForm(term) {
   $("term-region").value = (term && term.region) || "";
   $("term-aliases").value = ((term && term.aliases_zh) || []).join("，");
   $("term-source").value = (term && term.source) || "";
-  $("term-reviewer").value = (term && term.reviewer) || "待审定";
+  $("term-reviewer").value = (term && term.reviewer) || "";
   $("term-del").hidden = !state.editingId;
   $("term-status").textContent = state.editingId ? "正在编辑「" + (term.zh || "") + "」" : "新增词条";
   renderTermList();
@@ -293,7 +293,7 @@ function collectTerm() {
     region: $("term-region").value.trim(),
     aliases_zh: $("term-aliases").value.split(/[,，、]/).map((x) => x.trim()).filter(Boolean),
     source: $("term-source").value.trim(),
-    reviewer: $("term-reviewer").value.trim() || "待审定",
+    reviewer: $("term-reviewer").value.trim(),
   };
 }
 

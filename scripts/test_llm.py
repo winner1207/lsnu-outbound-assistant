@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""连通性探测：读仓库根目录 .env，请求 OpenAI 兼容 chat/completions。"""
 from __future__ import annotations
 
 import json

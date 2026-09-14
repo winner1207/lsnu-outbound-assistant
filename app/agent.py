@@ -43,7 +43,7 @@ IDENT_PROMPT = """你是乐师对外教学助手的识图模块。先识字，�
   "scene": "photo"
 }"""
 
-STORY_PROMPT = """你是通用多语种讲解 Agent。下面是识图结果和检索摘要。请写七语导游讲解。
+STORY_PROMPT = """你是乐师对外教学助手。下面是识图结果和检索摘要。请写七语导游讲解。
 识图：
 {ident_json}
 
@@ -59,7 +59,7 @@ STORY_PROMPT = """你是通用多语种讲解 Agent。下面是识图结果和�
 规则：
 - 标题用识图给出的地名；检索能印证则写清行政区。
 - 先讲画面里看见的，再补地理/人文故事。
-- 检索与画面冲突时以画面为准，并写「请老师补充」。
+- 检索与画面冲突时以画面为准，并注明依据不足。
 - 七语 zh en ja fr es ko th，每语 80–140 字。
 只返回 JSON：
 {{"zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
@@ -74,7 +74,7 @@ KNOWN_FACTS = """已知讲解口径（与照片/专名相关时采用，不得�
 - 苏园：凌云山园门，匾额「蘇園」，从右到左读。
 """
 
-TEXT_PROMPT = """你是通用的多语种讲解 Agent。用户手动输入一个地名、文物、题刻或短语（可以是峨眉山、乐山大佛下山虎，或任何景点专名），请做七语讲解并补一点背景故事。
+TEXT_PROMPT = """你是乐师对外教学助手。用户手动输入一个地名、文物、题刻或短语，请做七语讲解并补一点背景。
 输入：{query}
 {facts}
 术语表中的专名必须用表内译法：
@@ -83,18 +83,18 @@ TEXT_PROMPT = """你是通用的多语种讲解 Agent。用户手动输入一个
 规则：
 - 先给规范译名，再讲它是什么、在哪、游客怎么看。
 - 下面「已知口径」仅当输入确实指向该条时采用，不要把无关输入套进去。
-- 不知道的年代数字写「请老师补充」，不要编造。
+- 不知道的年代数字注明依据不足，不要编造。
 - 七语 zh en ja fr es ko th，每语 80–140 字。
 只返回 JSON：
 {{"scene":"photo","label_zh":"专名短名","reason":"一句话","zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
 """
-CHAT_PROMPT = """你是通用的多语种讲解 Agent。请围绕用户刚上传的这张照片继续回答。
+CHAT_PROMPT = """你是乐师对外教学助手。请围绕用户刚上传的这张照片继续回答。
 识别名称：{label_zh}
 图中文字：{ocr_text}
 画面：{in_photo}
 专名锁定：
 {term_table}
-先依据画面所见；问到题刻/佛语按识读结果解释，看不清就请老师补充。
+先依据画面所见；问到题刻按识读结果解释，看不清就注明依据不足。
 用用户提问的语言回答；未限定时用中文，并补两句英文。"""
 
 
@@ -194,11 +194,11 @@ def ident_from_term(term: dict, texts: list[str]) -> tuple[dict, dict, str]:
         "label_zh": zh,
         "region": region,
         "ocr_text": zh,
-        "ocr_note": "本地识字后按从右到左校对，并命中校本术语",
-        "in_photo": f"图中题刻锁定为「{zh}」",
+        "ocr_note": "题刻已按校本术语校对",
+        "in_photo": f"图中题刻为「{zh}」",
         "related": True,
         "confidence": 0.96,
-        "reason": "OCR 与校本术语表命中",
+        "reason": "命中校本术语",
     }
     ident_raw = {
         **ident,
@@ -246,7 +246,7 @@ def write_story(ident_raw: dict, raw: str, grounding: str) -> tuple[list[dict], 
                 "role": "system",
                 "content": STORY_PROMPT.format(
                     ident_json=raw if len(raw) < 1800 else str(ident_raw)[:1800],
-                    grounding=grounding or "（检索无结果，请仅依据画面与你的可靠地理知识；无把握则请老师补充）",
+                    grounding=grounding or "（检索无结果，仅依据画面；无把握则注明依据不足）",
                     facts=KNOWN_FACTS,
                     term_table=glossary.term_table_for_prompt(terms),
                 ),

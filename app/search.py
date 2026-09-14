@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""轻量检索接地：中文维基搜索，给识图一个可核对的地名来源。"""
 from __future__ import annotations
 
 import json

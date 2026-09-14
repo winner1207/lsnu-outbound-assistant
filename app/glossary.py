@@ -200,8 +200,16 @@ def _validated(payload: dict, *, old: dict | None = None) -> dict:
         term["region"] = region
     else:
         term.pop("region", None)
-    term["source"] = (payload.get("source") or "").strip()
-    term["reviewer"] = (payload.get("reviewer") or "待审定").strip() or "待审定"
+    source = (payload.get("source") or "").strip()
+    if source:
+        term["source"] = source
+    else:
+        term.pop("source", None)
+    reviewer = (payload.get("reviewer") or "").strip()
+    if reviewer:
+        term["reviewer"] = reviewer
+    else:
+        term.pop("reviewer", None)
     return term
 
 

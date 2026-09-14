@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""把本仓库同步到部署机 /opt/lsnu-outbound-assistant。密钥或密码只从 .deploy.env 读。"""
 from __future__ import annotations
 
 import os
@@ -12,7 +11,7 @@ import paramiko
 
 ROOT = Path(__file__).resolve().parents[1]
 DEPLOY_ENV = ROOT / ".deploy.env"
-SKIP_DIRS = {".git", ".venv", "__pycache__", ".ssh", ".idea"}
+SKIP_DIRS = {".git", ".venv", "__pycache__", ".ssh", ".idea", "debug"}
 SKIP_FILES = {".deploy.env"}
 PRESERVE_REMOTE = {"data/glossary.json"}
 SKIP_NAME_PREFIX = ("_probe_host", "_switch_host", "_patch_", "_test_", "_sse", "_think", "_skip_")
