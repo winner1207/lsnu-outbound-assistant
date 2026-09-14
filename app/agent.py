@@ -187,6 +187,7 @@ def explain_text(query: str) -> tuple[dict, list[dict], dict[str, str], dict[str
         ],
         max_tokens=2800,
         timeout=120,
+        enable_search=True,
     )
     data = llm.parse_json_object(raw)
     ident = _normalize_ident(data)
@@ -242,6 +243,7 @@ def identify_from_image(mime: str, b64: str, ocr_texts: list[str] | None = None)
         ],
         max_tokens=900,
         timeout=180,
+        enable_search=True,
     )
     ident_raw = llm.parse_json_object(raw)
     return _normalize_ident(ident_raw), ident_raw, raw
@@ -254,7 +256,7 @@ def ground_ident(ident: dict, ident_raw: dict) -> tuple[str, str]:
     return query, search.wiki_ground(query)
 
 
-def iter_write_story(ident_raw: dict, raw: str, grounding: str):
+def iter_write_story(ident_raw: dict, raw: str, grounding: str, *, enable_search: bool = False):
     terms = glossary.all_terms()
     messages = [
         {
@@ -272,7 +274,7 @@ def iter_write_story(ident_raw: dict, raw: str, grounding: str):
     hits = {lang: [] for lang in LANGS}
     seen: set[str] = set()
     buf = ""
-    for piece in llm.chat_stream(messages, max_tokens=2200, timeout=180):
+    for piece in llm.chat_stream(messages, max_tokens=2200, timeout=180, enable_search=enable_search):
         buf += piece
         found = llm.extract_lang_fields(buf, LANGS)
         fresh = []
@@ -303,9 +305,9 @@ def iter_write_story(ident_raw: dict, raw: str, grounding: str):
         yield terms, locked, hits, final or list(LANGS)
 
 
-def write_story(ident_raw: dict, raw: str, grounding: str) -> tuple[list[dict], dict[str, str], dict[str, list[str]]]:
+def write_story(ident_raw: dict, raw: str, grounding: str, *, enable_search: bool = False) -> tuple[list[dict], dict[str, str], dict[str, list[str]]]:
     last = None
-    for terms, locked, hits, _langs in iter_write_story(ident_raw, raw, grounding):
+    for terms, locked, hits, _langs in iter_write_story(ident_raw, raw, grounding, enable_search=enable_search):
         last = (terms, locked, hits)
     if not last:
         raise RuntimeError("讲解未完成")
@@ -368,7 +370,7 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
     yield {"type": "status", "step": "story", "message": "正在撰写讲解…"}
     payload = None
     session_id = None
-    for terms, locked, hits, langs in iter_write_story(ident_raw, raw, grounding):
+    for terms, locked, hits, langs in iter_write_story(ident_raw, raw, grounding, enable_search=not locked_by_glossary):
         if session_id is None:
             payload = create_session(ident, terms, locked, hits)
             session_id = payload["session_id"]

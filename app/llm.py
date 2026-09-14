@@ -50,20 +50,19 @@ def _request(url: str, body: dict, timeout: int) -> dict:
     return payload
 
 
-def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, retries: int = 1) -> str:
+def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, retries: int = 1, enable_search: bool = False) -> str:
     last = None
     for attempt in range(retries + 1):
         try:
-            payload = _request(
-                f"{LLM_BASE_URL}/chat/completions",
-                {
-                    "model": LLM_MODEL,
-                    "messages": messages,
-                    "temperature": 0.2,
-                    "max_tokens": max_tokens,
-                },
-                timeout,
-            )
+            body = {
+                "model": LLM_MODEL,
+                "messages": messages,
+                "temperature": 0.2,
+                "max_tokens": max_tokens,
+            }
+            if enable_search:
+                body["enable_search"] = True
+            payload = _request(f"{LLM_BASE_URL}/chat/completions", body, timeout)
             break
         except RuntimeError as exc:
             last = exc
@@ -138,19 +137,19 @@ def _delta_text(payload: dict) -> str:
     return str(content)
 
 
-def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180):
+def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, enable_search: bool = False):
     if not LLM_BASE_URL or not LLM_API_KEY:
         raise RuntimeError("未配置 LLM_BASE_URL / LLM_API_KEY")
-    data = json.dumps(
-        {
-            "model": LLM_MODEL,
-            "messages": messages,
-            "temperature": 0.2,
-            "max_tokens": max_tokens,
-            "stream": True,
-        },
-        ensure_ascii=False,
-    ).encode("utf-8")
+    body = {
+        "model": LLM_MODEL,
+        "messages": messages,
+        "temperature": 0.2,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }
+    if enable_search:
+        body["enable_search"] = True
+    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         f"{LLM_BASE_URL}/chat/completions",
         data=data,
