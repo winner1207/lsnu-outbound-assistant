@@ -92,6 +92,10 @@ function highlight(text, words) {
 function renderIdent(data) {
   if (!data) return;
   const bits = [data.region ? `识别为「${data.label_zh}」（${data.region}）` : `识别为「${data.label_zh || "画面景物"}」`];
+  if (data.scene === "unknown" && data.label_zh && data.label_zh !== "无法确认") {
+    const conf = data.confidence != null ? data.confidence : "低";
+    bits.push(`未审定候选，置信度约 ${conf}，请人工核实`);
+  }
   if (data.in_photo) bits.push(data.in_photo);
   if (data.reason) bits.push(data.reason);
   $("ident").textContent = bits.join(" · ");
