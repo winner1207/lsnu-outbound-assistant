@@ -268,51 +268,21 @@ def ground_ident(ident: dict, ident_raw: dict) -> tuple[str, str]:
 
 def iter_write_story(ident_raw: dict, raw: str, grounding: str, *, enable_search: bool = False):
     terms = glossary.all_terms()
-    messages = [
-        {
-            "role": "system",
-            "content": STORY_PROMPT.format(
-                ident_json=raw if len(raw) < 1800 else str(ident_raw)[:1800],
-                grounding=grounding or "（检索无结果，仅依据画面；无把握则注明依据不足）",
-                facts=KNOWN_FACTS,
-                term_table=glossary.term_table_for_prompt(terms),
-            ),
-        },
-        {"role": "user", "content": "请根据识图与检索写七语讲解。先写中文。"},
-    ]
     locked = {lang: "" for lang in LANGS}
     hits = {lang: [] for lang in LANGS}
-    seen: set[str] = set()
-    buf = ""
-    for piece in llm.chat_stream(messages, max_tokens=2200, timeout=180, enable_search=enable_search):
-        buf += piece
-        found = llm.extract_lang_fields(buf, LANGS)
-        fresh = []
-        for lang, text in found.items():
-            if lang in seen or not text.strip():
-                continue
-            locked[lang], hits[lang] = apply_lock(text, terms, lang)
-            seen.add(lang)
-            fresh.append(lang)
-        if fresh:
-            yield terms, locked, hits, fresh
-    try:
-        texts = llm.parse_json_object(buf)
-    except RuntimeError:
-        texts = {}
-        if not any(locked.values()):
-            raise
-    final = []
+    labels = ", ".join(LANG_LABEL.values())
     for lang in LANGS:
-        text = (texts.get(lang) or locked.get(lang) or "").strip()
-        if not text:
-            continue
-        locked[lang], hits[lang] = apply_lock(text, terms, lang)
-        if lang not in seen:
-            final.append(lang)
-            seen.add(lang)
-    if final or not seen:
-        yield terms, locked, hits, final or list(LANGS)
+        prompt = STORY_PROMPT.format(
+            ident_json=raw if len(raw) < 1800 else str(ident_raw)[:1800],
+            grounding=grounding or "（检索无结果，仅依据画面；无把握则注明依据不足）",
+            facts=KNOWN_FACTS,
+            term_table=glossary.term_table_for_prompt(terms),
+        )
+        messages = [{"role": "system", "content": prompt}, {"role": "user", "content": f"只生成{LANG_LABEL[lang]}，不要 JSON 外壳，直接输出讲解正文。"}]
+        text = "".join(llm.chat_stream(messages, max_tokens=500, timeout=120, enable_search=False)).strip()
+        if text:
+            locked[lang], hits[lang] = apply_lock(text, terms, lang)
+            yield terms, locked, hits, [lang]
 
 
 def write_story(ident_raw: dict, raw: str, grounding: str, *, enable_search: bool = False) -> tuple[list[dict], dict[str, str], dict[str, list[str]]]:
@@ -376,7 +346,7 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
     yield {"type": "status", "step": "story", "message": "正在撰写七语讲解…"}
     payload = None
     session_id = None
-    for terms, locked, hits, langs in iter_write_story(ident_raw, raw, grounding, enable_search=not locked_by_glossary):
+    for terms, locked, hits, langs in iter_write_story(ident_raw, raw, grounding, enable_search=False):
         if session_id is None:
             payload = create_session(ident, terms, locked, hits)
             session_id = payload["session_id"]

@@ -12,7 +12,7 @@ class KeepaliveTest(unittest.TestCase):
             yield sse({"type": "done", "step": "deliver", "message": "讲解完成"})
 
         chunks = list(iter_with_keepalive(producer, interval=0.1))
-        self.assertTrue(any("仍在处理" in c for c in chunks))
+        self.assertTrue(any("模型仍在分析" in c for c in chunks))
         self.assertTrue(any("讲解完成" in c for c in chunks))
         self.assertEqual(chunks[-1], sse({"type": "done", "step": "deliver", "message": "讲解完成"}))
 
@@ -23,7 +23,7 @@ class KeepaliveTest(unittest.TestCase):
             yield sse({"type": "done", "step": "deliver"})
 
         chunks = list(iter_with_keepalive(producer, interval=0.1))
-        ticks = [c for c in chunks if "仍在处理" in c]
+        ticks = [c for c in chunks if "模型仍在分析" in c]
         self.assertTrue(ticks)
         self.assertIn('"step": "story"', ticks[0])
 
