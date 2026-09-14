@@ -5,14 +5,16 @@
       "packs": [
         "tourism",
         "campus"
-      ]
+      ],
+      "visual_hint": "依山巨型坐佛"
     },
     "lingyun": {
       "label_zh": "凌云寺 / 凌云山",
       "packs": [
         "tourism",
         "campus"
-      ]
+      ],
+      "visual_hint": "圆形大「佛」字龛"
     },
     "moruo": {
       "label_zh": "沫若 / 郭沫若相关",
@@ -60,7 +62,15 @@
       "packs": [
         "tourism",
         "campus"
-      ]
+      ],
+      "visual_hint": "白虎雕像或崖壁虎形"
+    },
+    "dongfang_fodu": {
+      "label_zh": "东方佛都摩崖石刻群",
+      "packs": [
+        "tourism"
+      ],
+      "visual_hint": "圆形双龛大字（如福寿）配满壁经文小字，或桃形火焰背光坐佛加左右侍者像组合：多为乐山大佛景区毗邻的东方佛都摩崖石刻群造像点，专名与年代待人工核实"
     }
   },
   "terms": [
@@ -224,6 +234,7 @@
     {
       "id": "lingyun-temple",
       "pack": "tourism",
+      "scene": "inscription",
       "zh": "凌云寺",
       "en": "Lingyun Temple",
       "ja": "凌雲寺",
@@ -794,6 +805,29 @@
       "aliases_th": [],
       "region": "四川乐山凌云山",
       "source": "凌云山摩崖"
+    },
+    {
+      "id": "dongfang-fodu",
+      "pack": "tourism",
+      "scene": "dongfang_fodu",
+      "zh": "东方佛都",
+      "en": "Oriental Buddha Capital",
+      "ja": "東方仏都",
+      "fr": "Capitale orientale du Bouddha",
+      "es": "Capital Oriental de Buda",
+      "ko": "둥팡포두",
+      "th": "ตงฟางฝอตู",
+      "aliases_zh": [],
+      "aliases_en": [
+        "Dongfang Fodu"
+      ],
+      "aliases_ja": [],
+      "aliases_fr": [],
+      "aliases_es": [],
+      "aliases_ko": [],
+      "aliases_th": [],
+      "region": "四川乐山",
+      "source": "识图案例待老师最终审定（2026-09-14 福寿摩崖造像组合识别）"
     }
   ]
 }

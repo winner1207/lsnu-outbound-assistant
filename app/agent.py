@@ -24,33 +24,38 @@ LANG_LABEL = {
     "th": "泰文",
 }
 
-IDENT_PROMPT = """你是乐山师范多语言智能解说的识图模块。先识字，再判断地点。禁止拿外地热门景点硬套。
+IDENT_PROMPT_TEMPLATE = """你是乐山师范多语言智能解说的识图模块。先识字，再判断地点。禁止拿外地热门景点硬套。
 
 识字：
 - 匾额、摩崖、对联默认从右到左读，再给从左到右对照。
 - 繁体转简体。不要为了凑地名而旋转或倒置图片。
-- 乐山常见题刻：回头是岸、凌雲寺、海师洞、载酒时游处、苏园、乐在其中。
+- 乐山常见题刻：{inscriptions}
 
 看景（字不够时）：
-- 依山巨型坐佛：乐山大佛
-- 白虎雕像或崖壁虎形：下山虎 / 龙湫虎穴
-- 圆形大「佛」字龛：凌云寺
-- 不确定就 unknown。不要写成三游洞、赤水丹霞、万峰林、阿弥陀佛、佛光普照。
+{visual_hints}
+- 不确定具体专名时，也必须在 candidates 里给出至少一个最佳猜测（name/region/confidence/why 都要填，confidence 可以很低），标注为待人工核实；只有连大致方向都判断不出来才整体判 unknown。不要写成三游洞、赤水丹霞、万峰林、阿弥陀佛、佛光普照。
 
 只返回 JSON：
-{
+{{
   "in_photo": "一句话描述所见",
   "ocr_text": "图中文字，没有则空",
   "ocr_note": "读法，是否从右到左",
   "features": ["红色砂岩", "摩崖四字"],
   "search_query": "用于检索的中文关键词",
-  "candidates": [{"name":"回头是岸","region":"四川乐山","confidence":0.86,"why":"从右到左读四字"}],
+  "candidates": [{{"name":"回头是岸","region":"四川乐山","confidence":0.86,"why":"从右到左读四字"}}],
   "label_zh": "最可能的短名",
   "region": "省市区",
   "confidence": 0.86,
   "reason": "依据画面哪一部分",
   "scene": "photo"
-}"""
+}}"""
+
+
+def _ident_prompt() -> str:
+    inscriptions = "、".join(t["zh"] for t in glossary.inscription_terms()) or "（无）"
+    hints = "\n".join(f"- {hint}：{label}" for label, hint in glossary.scene_visual_hints())
+    return IDENT_PROMPT_TEMPLATE.format(inscriptions=inscriptions, visual_hints=hints or "- （无）")
+
 
 STORY_PROMPT = """你是乐山师范多语言智能解说。下面是识图结果和检索摘要。请写七语导游讲解。
 识图：
@@ -82,6 +87,7 @@ KNOWN_FACTS = """已知讲解口径（与照片/专名相关时采用，不得�
 - 海师洞：纪念开凿大佛的海通和尚，匾额繁体常作「海師洞」，从右到左读。
 - 载酒时游处：凌云山苏东坡相关摩崖，从右到左读「载酒时游处」。
 - 苏园：凌云山园门，匾额「蘇園」，从右到左读。
+- 东方佛都福寿摩崖造像：红砂岩崖壁摩崖组合，中央坐佛带桃形火焰背光，左右各立一尊侍者像，崖面满刻经文小字，两侧圆形龛内大字分刻「福」「寿」。多见于乐山大佛景区毗邻的东方佛都风景区内，具体造像年代与撰者待人工审定，讲解时须注明依据不足。
 """
 
 TEXT_PROMPT = """你是乐山师范多语言智能解说。用户手动输入一个地名、文物、题刻或短语，请做七语讲解并补一点背景。
@@ -225,7 +231,7 @@ def identify_from_image(mime: str, b64: str, ocr_texts: list[str] | None = None)
         hint += " 本地OCR（顺序可能反了）：" + "、".join(ocr_texts[:8])
     raw = llm.chat(
         [
-            {"role": "system", "content": IDENT_PROMPT},
+            {"role": "system", "content": _ident_prompt()},
             {
                 "role": "user",
                 "content": [

@@ -75,6 +75,21 @@ def scene_for_term(term: dict) -> str:
     return "photo"
 
 
+def inscription_terms() -> list[dict]:
+    return [t for t in all_terms() if scene_for_term(t) == "inscription"]
+
+
+def scene_visual_hints() -> list[tuple[str, str]]:
+    data = load()
+    out = []
+    for meta in (data.get("scenes") or {}).values():
+        hint = (meta or {}).get("visual_hint")
+        label = (meta or {}).get("label_zh")
+        if hint and label:
+            out.append((label, hint))
+    return out
+
+
 def _lev(a: str, b: str) -> int:
     if a == b:
         return 0
