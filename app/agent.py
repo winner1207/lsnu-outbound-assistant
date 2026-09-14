@@ -24,7 +24,7 @@ LANG_LABEL = {
     "th": "泰文",
 }
 
-IDENT_PROMPT_TEMPLATE = """你是乐山师范多语言智能解说的识图模块。先识字，再判断地点。禁止拿外地热门景点硬套。
+IDENT_PROMPT_TEMPLATE = """你是跨地域景点识别模块。先记录画面事实，再提出候选地点。禁止预设某个省市或景区，也禁止拿热门景点硬套。
 
 识字：
 - 匾额、摩崖、对联默认从右到左读，再给从左到右对照。
@@ -35,7 +35,7 @@ IDENT_PROMPT_TEMPLATE = """你是乐山师范多语言智能解说的识图模�
 {visual_hints}
 - 不确定具体专名时，也必须在 candidates 里给出至少一个最佳猜测（name/region/confidence/why 都要填，confidence 可以很低），标注为待人工核实；只有连大致方向都判断不出来才整体判 unknown。不要写成三游洞、赤水丹霞、万峰林、阿弥陀佛、佛光普照。
 
-只返回 JSON：
+候选必须至少考虑两个不同地点或明确说明为何只有一个候选；观察事实不能写成地点结论。只返回 JSON：
 {{
   "in_photo": "一句话描述所见",
   "ocr_text": "图中文字，没有则空",
@@ -227,7 +227,7 @@ def ident_from_term(term: dict, texts: list[str]) -> tuple[dict, dict, str]:
 
 
 def identify_from_image(mime: str, b64: str, ocr_texts: list[str] | None = None) -> tuple[dict, dict, str]:
-    hint = "识别这张照片。先读题刻（从右到左），再判断是不是乐山景物。"
+    hint = "识别这张照片。先读题刻（从右到左），再判断跨地域的景点候选；不要假设照片来自乐山。"
     if ocr_texts:
         hint += " 本地OCR（顺序可能反了）：" + "、".join(ocr_texts[:8])
     raw = llm.chat(
@@ -250,10 +250,20 @@ def identify_from_image(mime: str, b64: str, ocr_texts: list[str] | None = None)
 
 
 def ground_ident(ident: dict, ident_raw: dict) -> tuple[str, str]:
-    query = ident_raw.get("search_query") or ident.get("label_zh") or ""
-    if ident.get("region") and ident["region"] not in query:
-        query = f"{query} {ident['region']}".strip()
-    return query, search.wiki_ground(query)
+    candidates = ident_raw.get("candidates") or []
+    names = [str(c.get("name") or "").strip() for c in candidates if isinstance(c, dict)]
+    names = [n for n in names if n]
+    neutral = "洞穴 瀑布 水潭 栈道 摩崖题刻 景点"
+    queries = [neutral]
+    for name in names[:3]:
+        queries.append(f"{name} 景区 瀑布 洞穴")
+    chunks = []
+    for query in queries:
+        text = search.wiki_ground(query)
+        if text:
+            chunks.append(f"【检索词：{query}】{text}")
+    query = "；".join(queries)
+    return query, "\n".join(chunks)
 
 
 def iter_write_story(ident_raw: dict, raw: str, grounding: str, *, enable_search: bool = False):
@@ -320,12 +330,9 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
     ocr_texts = ocrutil.read_texts(original or base64.b64decode(b64))
     yield {"type": "status", "step": "identify", "message": "正在匹配校本术语…"}
     hits = glossary.match_terms(ocr_texts)
-    locked_by_glossary = bool(hits)
-    if hits:
-        ident, ident_raw, raw = ident_from_term(hits[0][0], ocr_texts)
-    else:
-        yield {"type": "status", "step": "identify", "message": "文字未锁定，正在调用视觉模型看画面…"}
-        ident, ident_raw, raw = identify_from_image(mime, b64, ocr_texts)
+    locked_by_glossary = False
+    yield {"type": "status", "step": "identify", "message": "正在调用视觉模型看画面…"}
+    ident, ident_raw, raw = identify_from_image(mime, b64, ocr_texts)
         vl_hits = glossary.match_terms(
             ocr_texts
             + [
@@ -335,8 +342,7 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
             ]
         )
         if vl_hits:
-            locked_by_glossary = True
-            ident, ident_raw, raw = ident_from_term(vl_hits[0][0], ocr_texts + [ident.get("ocr_text") or ""])
+            ident_raw["glossary_hits"] = [item[0].get("zh", "") for item in vl_hits[:3]]
     features = ident_raw.get("features") or ocr_texts
     cands = ident_raw.get("candidates") or []
     yield {
