@@ -266,9 +266,9 @@ def search_response(prompt: str, mime: str, b64: str) -> tuple[str, list[str]]:
         ]}],
         "tools": [{"type": "web_search"}],
         "tool_choice": "required",
-        "max_tool_calls": 3,
+        "max_tool_calls": 2,
         "enable_thinking": False,
-        "max_output_tokens": 2000,
+        "max_output_tokens": 1400,
         "store": False,
     }, 90)
     output = payload.get("output") or []
