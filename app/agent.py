@@ -315,14 +315,16 @@ def write_story(ident_raw: dict, raw: str, grounding: str, *, enable_search: boo
 
 
 def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
+    yield {"type": "status", "step": "identify", "message": "正在准备图片…"}
     yield {"type": "status", "step": "identify", "message": "正在识读题刻文字…"}
     ocr_texts = ocrutil.read_texts(original or base64.b64decode(b64))
+    yield {"type": "status", "step": "identify", "message": "正在匹配校本术语…"}
     hits = glossary.match_terms(ocr_texts)
     locked_by_glossary = bool(hits)
     if hits:
         ident, ident_raw, raw = ident_from_term(hits[0][0], ocr_texts)
     else:
-        yield {"type": "status", "step": "identify", "message": "文字未锁定，改看画面…"}
+        yield {"type": "status", "step": "identify", "message": "文字未锁定，正在调用视觉模型看画面…"}
         ident, ident_raw, raw = identify_from_image(mime, b64, ocr_texts)
         vl_hits = glossary.match_terms(
             ocr_texts
@@ -357,6 +359,7 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
             "message": f"校本锁定：{ident.get('label_zh')}",
         }
     else:
+        yield {"type": "status", "step": "search", "message": "正在生成检索关键词…"}
         yield {"type": "status", "step": "search", "message": "正在检索核对地名…"}
         query, grounding = ground_ident(ident, ident_raw)
         snippet = (grounding or "检索无结果，改用模型地理知识").replace("\n", " ")
@@ -367,7 +370,8 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
             "grounding": snippet[:600],
             "message": f"检索：{query or '（无关键词）'}",
         }
-    yield {"type": "status", "step": "story", "message": "正在撰写讲解…"}
+    yield {"type": "status", "step": "story", "message": "正在准备术语表…"}
+    yield {"type": "status", "step": "story", "message": "正在撰写七语讲解…"}
     payload = None
     session_id = None
     for terms, locked, hits, langs in iter_write_story(ident_raw, raw, grounding, enable_search=not locked_by_glossary):

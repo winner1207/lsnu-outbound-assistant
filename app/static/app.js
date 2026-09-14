@@ -1,6 +1,8 @@
 const $ = (id) => document.getElementById(id);
 const LANGS = ["zh", "en", "ja", "fr", "es", "ko", "th"];
 const state = { sessionId: "", terms: [], catalog: { terms: [], scenes: [], packs: [] }, editingId: "" };
+let progressStartedAt = 0;
+let progressTimer = 0;
 
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -15,9 +17,24 @@ function thinkClear() {
 function thinkAdd(step, message) {
   const li = document.createElement("li");
   const tag = { identify: "看图", search: "检索", story: "撰写", deliver: "完成" }[step] || step;
-  li.innerHTML = `<em>${tag}</em>${message || ""}`;
+  const elapsed = progressStartedAt ? ` <small>${((Date.now() - progressStartedAt) / 1000).toFixed(1)}s</small>` : "";
+  li.innerHTML = `<em>${tag}</em>${message || ""}${elapsed}`;
   $("think-log").appendChild(li);
   $("think-log").scrollTop = $("think-log").scrollHeight;
+}
+
+function progressStart() {
+  progressStartedAt = Date.now();
+  clearInterval(progressTimer);
+  progressTimer = setInterval(() => {
+    if (progressStartedAt) setStatus(`仍在处理中，已等待 ${((Date.now() - progressStartedAt) / 1000).toFixed(0)} 秒…`);
+  }, 1000);
+}
+
+function progressStop() {
+  clearInterval(progressTimer);
+  progressTimer = 0;
+  progressStartedAt = 0;
 }
 
 async function readSSE(res, onEvent) {
@@ -160,6 +177,7 @@ $("analyze").addEventListener("click", async () => {
   body.append("file", file);
   $("analyze").disabled = true;
   thinkClear();
+  progressStart();
   LANGS.forEach((lang) => { $(lang).innerHTML = ""; });
   $("chat").innerHTML = "";
   $("chat").dataset.zh = "";
@@ -195,6 +213,7 @@ $("analyze").addEventListener("click", async () => {
       }
       if (ev.type === "done") {
         setStatus("完成");
+        progressStop();
       }
       if (ev.type === "error") {
         thinkAdd(ev.step || "identify", ev.message || "识别失败");
@@ -206,6 +225,7 @@ $("analyze").addEventListener("click", async () => {
     setStatus(msg);
     thinkAdd("identify", msg);
   } finally {
+    progressStop();
     $("analyze").disabled = false;
   }
 });
