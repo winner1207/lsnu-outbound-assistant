@@ -333,16 +333,12 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
     locked_by_glossary = False
     yield {"type": "status", "step": "identify", "message": "正在调用视觉模型看画面…"}
     ident, ident_raw, raw = identify_from_image(mime, b64, ocr_texts)
-        vl_hits = glossary.match_terms(
-            ocr_texts
-            + [
-                ident.get("ocr_text") or "",
-                ident.get("label_zh") or "",
-                ident_raw.get("ocr_text") or "",
-            ]
-        )
-        if vl_hits:
-            ident_raw["glossary_hits"] = [item[0].get("zh", "") for item in vl_hits[:3]]
+    vl_hits = glossary.match_terms(
+        ocr_texts
+        + [ident.get("ocr_text") or "", ident.get("label_zh") or "", ident_raw.get("ocr_text") or ""]
+    )
+    if vl_hits:
+        ident_raw["glossary_hits"] = [item[0].get("zh", "") for item in vl_hits[:3]]
     features = ident_raw.get("features") or ocr_texts
     cands = ident_raw.get("candidates") or []
     yield {
