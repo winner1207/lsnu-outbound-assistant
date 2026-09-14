@@ -14,6 +14,15 @@ from app.lock import apply_lock
 SESSIONS: dict[str, dict[str, Any]] = {}
 MAX_SESSIONS = 40
 LANGS = glossary.LANGS
+LANG_LABEL = {
+    "zh": "中文",
+    "en": "英文",
+    "ja": "日文",
+    "fr": "法文",
+    "es": "西班牙文",
+    "ko": "韩文",
+    "th": "泰文",
+}
 
 IDENT_PROMPT = """你是乐师对外教学助手的识图模块。先识字，再判断地点。禁止拿外地热门景点硬套。
 
@@ -61,6 +70,7 @@ STORY_PROMPT = """你是乐师对外教学助手。下面是识图结果和检�
 - 先讲画面里看见的，再补地理/人文故事。
 - 检索与画面冲突时以画面为准，并注明依据不足。
 - 七语 zh en ja fr es ko th，每语 80–140 字。
+- 按 zh、en、ja、fr、es、ko、th 的顺序写 JSON，写完一个字段再写下一项。
 只返回 JSON：
 {{"zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
 """
@@ -238,27 +248,62 @@ def ground_ident(ident: dict, ident_raw: dict) -> tuple[str, str]:
     return query, search.wiki_ground(query)
 
 
-def write_story(ident_raw: dict, raw: str, grounding: str) -> tuple[list[dict], dict[str, str], dict[str, list[str]]]:
+def iter_write_story(ident_raw: dict, raw: str, grounding: str):
     terms = glossary.all_terms()
-    story_raw = llm.chat(
-        [
-            {
-                "role": "system",
-                "content": STORY_PROMPT.format(
-                    ident_json=raw if len(raw) < 1800 else str(ident_raw)[:1800],
-                    grounding=grounding or "（检索无结果，仅依据画面；无把握则注明依据不足）",
-                    facts=KNOWN_FACTS,
-                    term_table=glossary.term_table_for_prompt(terms),
-                ),
-            },
-            {"role": "user", "content": "请根据识图与检索写七语讲解。"},
-        ],
-        max_tokens=2200,
-        timeout=180,
-    )
-    texts = llm.parse_json_object(story_raw)
-    locked, hits = _lock_bundle({lang: texts.get(lang, "") or "" for lang in LANGS}, terms)
-    return terms, locked, hits
+    messages = [
+        {
+            "role": "system",
+            "content": STORY_PROMPT.format(
+                ident_json=raw if len(raw) < 1800 else str(ident_raw)[:1800],
+                grounding=grounding or "（检索无结果，仅依据画面；无把握则注明依据不足）",
+                facts=KNOWN_FACTS,
+                term_table=glossary.term_table_for_prompt(terms),
+            ),
+        },
+        {"role": "user", "content": "请根据识图与检索写七语讲解。先写中文。"},
+    ]
+    locked = {lang: "" for lang in LANGS}
+    hits = {lang: [] for lang in LANGS}
+    seen: set[str] = set()
+    buf = ""
+    for piece in llm.chat_stream(messages, max_tokens=2200, timeout=180):
+        buf += piece
+        found = llm.extract_lang_fields(buf, LANGS)
+        fresh = []
+        for lang, text in found.items():
+            if lang in seen or not text.strip():
+                continue
+            locked[lang], hits[lang] = apply_lock(text, terms, lang)
+            seen.add(lang)
+            fresh.append(lang)
+        if fresh:
+            yield terms, locked, hits, fresh
+    try:
+        texts = llm.parse_json_object(buf)
+    except RuntimeError:
+        texts = {}
+        if not any(locked.values()):
+            raise
+    final = []
+    for lang in LANGS:
+        text = (texts.get(lang) or locked.get(lang) or "").strip()
+        if not text:
+            continue
+        locked[lang], hits[lang] = apply_lock(text, terms, lang)
+        if lang not in seen:
+            final.append(lang)
+            seen.add(lang)
+    if final or not seen:
+        yield terms, locked, hits, final or list(LANGS)
+
+
+def write_story(ident_raw: dict, raw: str, grounding: str) -> tuple[list[dict], dict[str, str], dict[str, list[str]]]:
+    last = None
+    for terms, locked, hits, _langs in iter_write_story(ident_raw, raw, grounding):
+        last = (terms, locked, hits)
+    if not last:
+        raise RuntimeError("讲解未完成")
+    return last
 
 
 def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
@@ -314,9 +359,25 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None):
             "grounding": snippet[:600],
             "message": f"检索：{query or '（无关键词）'}",
         }
-    yield {"type": "status", "step": "story", "message": "正在撰写中英日法西韩泰讲解…"}
-    terms, locked, hits = write_story(ident_raw, raw, grounding)
-    payload = create_session(ident, terms, locked, hits)
+    yield {"type": "status", "step": "story", "message": "正在撰写讲解…"}
+    payload = None
+    session_id = None
+    for terms, locked, hits, langs in iter_write_story(ident_raw, raw, grounding):
+        if session_id is None:
+            payload = create_session(ident, terms, locked, hits)
+            session_id = payload["session_id"]
+        else:
+            payload = patch_session(session_id, locked, hits)
+        names = "、".join(LANG_LABEL.get(lang, lang) for lang in langs)
+        yield {
+            "type": "partial",
+            "step": "story",
+            "langs": langs,
+            "result": payload,
+            "message": f"已写出{names}",
+        }
+    if not payload:
+        raise RuntimeError("讲解未完成")
     yield {"type": "done", "step": "deliver", "result": payload, "message": "讲解完成"}
 
 
@@ -394,6 +455,18 @@ def create_session(ident: dict, terms: list[dict], intro: dict, hits: dict) -> d
         ],
     }
     SESSIONS[session_id] = session
+    return public_session(session)
+
+
+def patch_session(session_id: str, intro: dict, hits: dict) -> dict:
+    session = SESSIONS.get(session_id)
+    if not session:
+        raise KeyError("会话不存在，请重新上传图片")
+    session["intro"] = intro
+    session["hits"] = hits
+    session["ts"] = time.time()
+    if session.get("messages") and len(session["messages"]) >= 2:
+        session["messages"][1] = {"role": "assistant", "content": intro.get("zh") or ""}
     return public_session(session)
 
 

@@ -89,37 +89,53 @@ function highlight(text, words) {
   return html;
 }
 
-function renderResult(data) {
-  state.sessionId = data.session_id;
-  state.terms = data.term_table || [];
-  const bits = [data.region ? `识别为「${data.label_zh}」（${data.region}）` : `识别为「${data.label_zh}」`];
+function renderIdent(data) {
+  if (!data) return;
+  const bits = [data.region ? `识别为「${data.label_zh}」（${data.region}）` : `识别为「${data.label_zh || "画面景物"}」`];
   if (data.in_photo) bits.push(data.in_photo);
   if (data.reason) bits.push(data.reason);
   $("ident").textContent = bits.join(" · ");
   if (data.ocr_text) {
     $("ocr").hidden = false;
     $("ocr").textContent = `图中文字：${data.ocr_text}${data.ocr_note ? "（" + data.ocr_note + "）" : ""}`;
-  } else {
-    $("ocr").hidden = true;
   }
+}
+
+function renderResult(data) {
+  if (!data) return;
+  if (data.session_id) state.sessionId = data.session_id;
+  state.terms = data.term_table || state.terms || [];
+  renderIdent(data);
   const select = $("scene");
-  select.innerHTML = "";
-  (data.scenes || []).forEach((scene) => {
-    const opt = document.createElement("option");
-    opt.value = scene.id;
-    opt.textContent = scene.label_zh;
-    if (scene.id === data.scene) opt.selected = true;
-    select.appendChild(opt);
-  });
-  select.disabled = false;
-  $("terms").innerHTML = state.terms.map((t) => `<span>${t.zh} / ${t.en}</span>`).join("");
+  if (data.scenes && data.scenes.length) {
+    select.innerHTML = "";
+    data.scenes.forEach((scene) => {
+      const opt = document.createElement("option");
+      opt.value = scene.id;
+      opt.textContent = scene.label_zh;
+      if (scene.id === data.scene) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.disabled = false;
+  }
+  if (state.terms.length) {
+    $("terms").innerHTML = state.terms.map((t) => `<span>${t.zh} / ${t.en}</span>`).join("");
+  }
   LANGS.forEach((lang) => {
+    const text = (data.intro && data.intro[lang]) || "";
+    if (!text) return;
     const hits = (data.locked_terms && data.locked_terms[lang]) || [];
-    $(lang).innerHTML = highlight((data.intro && data.intro[lang]) || "", hits);
+    $(lang).innerHTML = highlight(text, hits);
   });
-  $("q").disabled = false;
-  $("ask").querySelector("button").disabled = false;
-  $("chat").innerHTML = `<div class="msg bot">${highlight((data.intro && data.intro.zh) || "", (data.locked_terms && data.locked_terms.zh) || [])}</div>`;
+  const zh = (data.intro && data.intro.zh) || "";
+  if (zh) {
+    $("q").disabled = false;
+    $("ask").querySelector("button").disabled = false;
+    if ($("chat").dataset.zh !== zh) {
+      $("chat").dataset.zh = zh;
+      $("chat").innerHTML = `<div class="msg bot">${highlight(zh, (data.locked_terms && data.locked_terms.zh) || [])}</div>`;
+    }
+  }
 }
 
 $("file").addEventListener("change", () => {
@@ -140,6 +156,11 @@ $("analyze").addEventListener("click", async () => {
   body.append("file", file);
   $("analyze").disabled = true;
   thinkClear();
+  LANGS.forEach((lang) => { $(lang).innerHTML = ""; });
+  $("chat").innerHTML = "";
+  $("chat").dataset.zh = "";
+  $("ident").textContent = "正在识别…";
+  $("ocr").hidden = true;
   setSteps("identify");
   setStatus("正在识别…");
   thinkAdd("identify", "已提交图片");
@@ -150,7 +171,10 @@ $("analyze").addEventListener("click", async () => {
       if (ev.step) setSteps(ev.step);
       if (ev.message) {
         setStatus(ev.message);
-        thinkAdd(ev.step || "identify", ev.message);
+        if (ev.message !== "仍在处理，请稍候…") thinkAdd(ev.step || "identify", ev.message);
+      }
+      if (ev.type === "identify" && ev.ident) {
+        renderIdent(ev.ident);
       }
       if (ev.type === "identify" && ev.features && ev.features.length) {
         thinkAdd("identify", "特征：" + ev.features.join("、"));
@@ -162,8 +186,10 @@ $("analyze").addEventListener("click", async () => {
       if (ev.type === "search" && ev.grounding) {
         thinkAdd("search", ev.grounding.slice(0, 220));
       }
-      if (ev.type === "done" && ev.result) {
+      if ((ev.type === "partial" || ev.type === "done") && ev.result) {
         renderResult(ev.result);
+      }
+      if (ev.type === "done") {
         setStatus("完成");
       }
       if (ev.type === "error") {
