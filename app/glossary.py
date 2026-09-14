@@ -29,6 +29,7 @@ SCENES = (
     "inscription",
     "photo",
     "unknown",
+    "dongfang_fodu",
 )
 
 
