@@ -193,7 +193,7 @@ $("analyze").addEventListener("click", async () => {
       if (ev.step) setSteps(ev.step);
       if (ev.message) {
         setStatus(ev.message);
-        if (ev.message !== "仍在处理，请稍候…") thinkAdd(ev.step || "identify", ev.message);
+        if (ev.message) thinkAdd(ev.step || "identify", ev.message);
       }
       if (ev.type === "identify" && ev.ident) {
         renderIdent(ev.ident);

@@ -25,11 +25,13 @@ def iter_with_keepalive(producer: Callable[[], Iterator[str]], interval: float =
 
     threading.Thread(target=run, daemon=True).start()
     last_step = "identify"
+    waiting = 0
     while True:
         try:
             kind, val = q.get(timeout=interval)
         except queue.Empty:
-            yield sse({"type": "status", "step": last_step, "message": "仍在处理，请稍候…"})
+            waiting += int(interval)
+            yield sse({"type": "status", "step": last_step, "message": f"模型仍在分析，已等待约 {waiting} 秒…"})
             continue
         if kind == "data":
             text = str(val)
@@ -41,6 +43,7 @@ def iter_with_keepalive(producer: Callable[[], Iterator[str]], interval: float =
                     ev = {}
                 if ev.get("step"):
                     last_step = ev["step"]
+                waiting = 0
             yield text
         elif kind == "err":
             yield sse({"type": "error", "message": str(val)})
