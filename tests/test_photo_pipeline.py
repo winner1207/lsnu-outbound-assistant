@@ -1,0 +1,124 @@
+import json
+from unittest.mock import patch
+
+import pytest
+
+from app import agent, llm
+
+
+def test_visual_prompt_has_no_local_glossary():
+    with patch.object(agent.glossary, 'inscription_terms', side_effect=AssertionError('local bias')):
+        prompt = agent._ident_prompt()
+    assert '乐山' not in prompt
+    assert '万峰林' not in prompt
+
+
+def test_search_requires_actual_tool_execution():
+    with patch.object(llm, '_request', return_value={'output': []}):
+        with pytest.raises(RuntimeError, match='搜索'):
+            llm.search_response('核验', 'image/jpeg', 'YWJj')
+
+
+def test_search_keeps_provider_sources_not_model_invented_links():
+    payload = {'status': 'completed', 'output': [
+        {'type': 'web_search_call', 'status': 'completed', 'action': {'sources': [{'url': 'https://example.org/proof'}]}},
+        {'type': 'message', 'content': [{'type': 'output_text', 'text': '{"label_zh":"新地点"}'}]},
+    ]}
+    with patch.object(llm, '_request', return_value=payload) as call:
+        text, sources = llm.search_response('核验', 'image/jpeg', 'YWJj')
+    assert sources == ['https://example.org/proof']
+    assert json.loads(text)['label_zh'] == '新地点'
+    assert call.call_args.args[1]['tool_choice'] == 'required'
+
+
+def test_verification_updates_label_and_uses_picture_features():
+    initial = {'label_zh': '旧地点', 'features': ['双塔', '石桥'], 'candidates': []}
+    with patch.object(llm, 'search_response', return_value=(json.dumps({'label_zh': '新地点', 'decision': 'probable'}), ['https://example.org'])) as call:
+        result = agent.verify_ident(initial, 'image/jpeg', 'YWJj')
+    assert result['label_zh'] == '新地点'
+    assert '双塔' in call.call_args.args[0]
+    assert '瀑布' not in call.call_args.args[0]
+
+
+def test_chinese_delivered_before_translations_and_no_search():
+    calls = []
+    def stream(messages, **kwargs):
+        calls.append((messages, kwargs))
+        yield '中文正文' if len(calls) == 1 else 'Translation'
+    with patch.object(llm, 'chat_stream', side_effect=stream):
+        gen = agent.iter_write_story({'label_zh': '陌生地点'}, '{}', '')
+        first = next(gen)
+        assert first[3] == ['zh']
+        assert len(calls) == 1
+        results = list(gen)
+    assert len(results) == 6
+    assert all(not kw['enable_search'] for _, kw in calls)
+    assert all('七语' not in messages[0]['content'] for messages, _ in calls)
+    assert all('中文正文' in messages[-1]['content'] for messages, _ in calls[1:])
+
+
+def test_failed_language_does_not_discard_other_languages():
+    def stream(messages, **kwargs):
+        if '日文' in messages[0]['content']:
+            raise RuntimeError('timeout')
+        yield '正文'
+    with patch.object(llm, 'chat_stream', side_effect=stream):
+        results = list(agent.iter_write_story({'label_zh': '陌生地点'}, '{}', ''))
+    assert len(results) == 7
+    assert results[-1][1]['en']
+    assert '失败' in results[-1][1]['ja']
+
+
+def test_verified_identity_reaches_session_and_story():
+    initial = {'label_zh': '旧地点', 'scene': 'photo', 'confidence': 0.4, 'reason': '初判', 'features': ['双塔']}
+    verified = {**initial, 'label_zh': '新地点', 'decision': 'probable', 'sources': ['https://example.org']}
+    def story(data, *args, **kwargs):
+        assert data['label_zh'] == '新地点'
+        yield [], {'zh': '介绍'}, {}, ['zh']
+    with patch.object(agent.ocrutil, 'read_texts', return_value=[]), \
+         patch.object(agent, 'identify_from_image', return_value=(initial, initial, '{}')), \
+         patch.object(agent, 'verify_ident', return_value=verified), \
+         patch.object(agent, 'iter_write_story', side_effect=story):
+        events = list(agent.iter_photo_progress('image/jpeg', 'YWJj', original=b'abc'))
+    final = events[-1]['result']
+    assert final['label_zh'] == '新地点'
+    assert final['sources'] == ['https://example.org']
+    assert final['decision'] == 'probable'
+
+
+def test_search_failure_does_not_confirm_candidate():
+    initial = {'label_zh': '旧地点', 'scene': 'photo', 'confidence': 0.9, 'reason': '初判'}
+    with patch.object(agent.ocrutil, 'read_texts', return_value=[]), \
+         patch.object(agent, 'identify_from_image', return_value=(initial, initial, '{}')), \
+         patch.object(agent, 'verify_ident', side_effect=RuntimeError('搜索失败')), \
+         patch.object(agent, 'iter_write_story', return_value=iter([([], {'zh': '待核实'}, {}, ['zh'])])):
+        events = list(agent.iter_photo_progress('image/jpeg', 'YWJj', original=b'abc'))
+    final = events[-1]['result']
+    assert final['decision'] == 'possible'
+    assert final['sources'] == []
+    assert '未完成' in final['reason']
+
+
+def test_unrelated_glossary_terms_not_sent_to_story():
+    with patch.object(agent.glossary, 'all_terms', return_value=[{'zh': '本地景点'}, {'zh': '已识别地点'}]):
+        assert agent.story_terms({'label_zh': '已识别地点'}) == [{'zh': '已识别地点'}]
+
+
+def test_missing_cited_evidence_prevents_confirmation():
+    with patch.object(llm, 'search_response', return_value=(json.dumps({'label_zh': '候选', 'decision': 'confirmed', 'evidence_urls': ['https://invented.test']}), ['https://real.test'])):
+        result = agent.verify_ident({}, 'image/jpeg', 'YWJj')
+    assert result['decision'] == 'possible'
+    assert result['sources'] == []
+
+
+@pytest.mark.parametrize('finish', ['length', None])
+def test_incomplete_stream_is_not_reported_as_success(finish):
+    from io import BytesIO
+    class Response(BytesIO):
+        headers = {'Content-Type': 'text/event-stream'}
+    data = {'choices': [{'delta': {'content': 'partial'}, 'finish_reason': finish}]}
+    response = Response(('data: ' + json.dumps(data) + '\n').encode())
+    with patch.object(llm, 'LLM_API_KEY', 'test'), patch.object(llm, 'LLM_BASE_URL', 'https://example.test'), \
+         patch('urllib.request.urlopen', return_value=response):
+        with pytest.raises(RuntimeError):
+            list(llm.chat_stream([]))

@@ -3,6 +3,7 @@ const LANGS = ["zh", "en", "ja", "fr", "es", "ko", "th"];
 const state = { sessionId: "", terms: [], catalog: { terms: [], scenes: [], packs: [] }, editingId: "" };
 let progressStartedAt = 0;
 let progressTimer = 0;
+let progressMessage = "正在处理";
 
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -18,7 +19,7 @@ function thinkAdd(step, message) {
   const li = document.createElement("li");
   const tag = { identify: "看图", search: "检索", story: "撰写", deliver: "完成" }[step] || step;
   const elapsed = progressStartedAt ? ` <small>${((Date.now() - progressStartedAt) / 1000).toFixed(1)}s</small>` : "";
-  li.innerHTML = `<em>${tag}</em>${message || ""}${elapsed}`;
+  li.innerHTML = `<em>${tag}</em>${escapeHtml(message)}${elapsed}`;
   $("think-log").appendChild(li);
   $("think-log").scrollTop = $("think-log").scrollHeight;
 }
@@ -27,7 +28,7 @@ function progressStart() {
   progressStartedAt = Date.now();
   clearInterval(progressTimer);
   progressTimer = setInterval(() => {
-    if (progressStartedAt) setStatus(`仍在处理中，已等待 ${((Date.now() - progressStartedAt) / 1000).toFixed(0)} 秒…`);
+    if (progressStartedAt) $("status").textContent = `${progressMessage} · 总耗时 ${((Date.now() - progressStartedAt) / 1000).toFixed(0)} 秒`;
   }, 1000);
 }
 
@@ -57,6 +58,7 @@ async function readSSE(res, onEvent) {
 }
 
 function setStatus(text) {
+  progressMessage = text;
   $("status").textContent = text;
 }
 
@@ -109,6 +111,8 @@ function highlight(text, words) {
 function renderIdent(data) {
   if (!data) return;
   const bits = [data.region ? `识别为「${data.label_zh}」（${data.region}）` : `识别为「${data.label_zh || "画面景物"}」`];
+  const decisions = { confirmed: "证据较充分", probable: "较可能，仍需核实", possible: "待核验候选", unknown: "无法确认" };
+  if (data.decision) bits.unshift(decisions[data.decision] || "待核验候选");
   if (data.scene === "unknown" && data.label_zh && data.label_zh !== "无法确认") {
     const conf = data.confidence != null ? data.confidence : "低";
     bits.push(`未审定候选，置信度约 ${conf}，请人工核实`);
@@ -116,6 +120,21 @@ function renderIdent(data) {
   if (data.in_photo) bits.push(data.in_photo);
   if (data.reason) bits.push(data.reason);
   $("ident").textContent = bits.join(" · ");
+  const sources = $("sources");
+  sources.replaceChildren();
+  for (const url of data.sources || []) {
+    if (!/^https?:\/\//i.test(url)) continue;
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = url;
+    link.textContent = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    li.appendChild(link);
+    sources.appendChild(li);
+  }
+  sources.hidden = !sources.children.length;
+  $("ocr").hidden = !data.ocr_text;
   if (data.ocr_text) {
     $("ocr").hidden = false;
     $("ocr").textContent = `图中文字：${data.ocr_text}${data.ocr_note ? "（" + data.ocr_note + "）" : ""}`;
@@ -139,9 +158,7 @@ function renderResult(data) {
     });
     select.disabled = false;
   }
-  if (state.terms.length) {
-    $("terms").innerHTML = state.terms.map((t) => `<span>${t.zh} / ${t.en}</span>`).join("");
-  }
+  $("terms").innerHTML = state.terms.map((t) => `<span>${escapeHtml(t.zh)} / ${escapeHtml(t.en)}</span>`).join("");
   LANGS.forEach((lang) => {
     const text = (data.intro && data.intro[lang]) || "";
     if (!text) return;
@@ -178,6 +195,16 @@ $("analyze").addEventListener("click", async () => {
   $("analyze").disabled = true;
   thinkClear();
   progressStart();
+  state.sessionId = "";
+  state.terms = [];
+  $("terms").replaceChildren();
+  $("sources").replaceChildren();
+  $("sources").hidden = true;
+  $("scene").disabled = true;
+  $("q").disabled = true;
+  $("ask").querySelector("button").disabled = true;
+  $("translate").disabled = true;
+  let completed = false;
   LANGS.forEach((lang) => { $(lang).innerHTML = ""; });
   $("chat").innerHTML = "";
   $("chat").dataset.zh = "";
@@ -195,7 +222,7 @@ $("analyze").addEventListener("click", async () => {
         setStatus(ev.message);
         if (ev.message) thinkAdd(ev.step || "identify", ev.message);
       }
-      if (ev.type === "identify" && ev.ident) {
+      if ((ev.type === "identify" || ev.type === "search") && ev.ident) {
         renderIdent(ev.ident);
       }
       if (ev.type === "identify" && ev.features && ev.features.length) {
@@ -212,7 +239,8 @@ $("analyze").addEventListener("click", async () => {
         renderResult(ev.result);
       }
       if (ev.type === "done") {
-        setStatus("完成");
+        completed = true;
+        setStatus(ev.message || "完成");
         progressStop();
       }
       if (ev.type === "error") {
@@ -220,6 +248,7 @@ $("analyze").addEventListener("click", async () => {
         throw new Error(ev.message || "识别失败");
       }
     });
+    if (!completed) throw new Error("连接已结束但结果未完成，已保留收到的内容，请重试。");
   } catch (err) {
     const msg = friendlyError(err);
     setStatus(msg);
@@ -227,6 +256,7 @@ $("analyze").addEventListener("click", async () => {
   } finally {
     progressStop();
     $("analyze").disabled = false;
+    $("translate").disabled = false;
   }
 });
 

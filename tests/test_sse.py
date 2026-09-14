@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+import json
 import unittest
 
 from app.sseutil import iter_with_keepalive, sse
@@ -12,7 +13,7 @@ class KeepaliveTest(unittest.TestCase):
             yield sse({"type": "done", "step": "deliver", "message": "讲解完成"})
 
         chunks = list(iter_with_keepalive(producer, interval=0.1))
-        self.assertTrue(any("模型仍在分析" in c for c in chunks))
+        self.assertTrue(any(json.loads(c[6:]).get("heartbeat") for c in chunks))
         self.assertTrue(any("讲解完成" in c for c in chunks))
         self.assertEqual(chunks[-1], sse({"type": "done", "step": "deliver", "message": "讲解完成"}))
 
@@ -23,9 +24,10 @@ class KeepaliveTest(unittest.TestCase):
             yield sse({"type": "done", "step": "deliver"})
 
         chunks = list(iter_with_keepalive(producer, interval=0.1))
-        ticks = [c for c in chunks if "模型仍在分析" in c]
+        ticks = [c for c in chunks if json.loads(c[6:]).get("heartbeat")]
         self.assertTrue(ticks)
         self.assertIn('"step": "story"', ticks[0])
+        self.assertIn("正在撰写", ticks[0])
 
     def test_error_from_producer(self):
         def producer():

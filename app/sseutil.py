@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import queue
 import threading
+import time
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -25,13 +26,14 @@ def iter_with_keepalive(producer: Callable[[], Iterator[str]], interval: float =
 
     threading.Thread(target=run, daemon=True).start()
     last_step = "identify"
-    waiting = 0
+    last_event_at = time.monotonic()
+    last_message = "正在处理"
     while True:
         try:
             kind, val = q.get(timeout=interval)
         except queue.Empty:
-            waiting += int(interval)
-            yield sse({"type": "status", "step": last_step, "message": f"模型仍在分析，已等待约 {waiting} 秒…"})
+            waiting = int(time.monotonic() - last_event_at)
+            yield sse({"type": "status", "step": last_step, "heartbeat": True, "message": f"{last_message}（本阶段已等待 {waiting} 秒）"})
             continue
         if kind == "data":
             text = str(val)
@@ -43,7 +45,11 @@ def iter_with_keepalive(producer: Callable[[], Iterator[str]], interval: float =
                     ev = {}
                 if ev.get("step"):
                     last_step = ev["step"]
-                waiting = 0
+                if ev.get("message"):
+                    last_message = str(ev["message"])
+                if ev.get("type") == "partial":
+                    last_message = "正在生成其余语种，已完成的内容可先阅读"
+                last_event_at = time.monotonic()
             yield text
         elif kind == "err":
             yield sse({"type": "error", "message": str(val)})

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import socket
 import ssl
@@ -10,6 +11,8 @@ import urllib.error
 import urllib.request
 
 from app.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+
+logger = logging.getLogger(__name__)
 
 
 def _request(url: str, body: dict, timeout: int) -> dict:
@@ -50,7 +53,7 @@ def _request(url: str, body: dict, timeout: int) -> dict:
     return payload
 
 
-def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, retries: int = 1, enable_search: bool = False) -> str:
+def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, retries: int = 1, enable_search: bool = False, enable_thinking: bool | None = None) -> str:
     last = None
     search_on = enable_search
     for attempt in range(retries + 1):
@@ -63,6 +66,8 @@ def chat(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, re
             }
             if search_on:
                 body["enable_search"] = True
+            if enable_thinking is not None:
+                body["enable_thinking"] = enable_thinking
             payload = _request(f"{LLM_BASE_URL}/chat/completions", body, timeout)
             break
         except RuntimeError as exc:
@@ -156,7 +161,7 @@ def _stream_request(body: dict, timeout: int) -> urllib.request.Request:
     )
 
 
-def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, enable_search: bool = False):
+def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 180, enable_search: bool = False, enable_thinking: bool | None = None):
     if not LLM_BASE_URL or not LLM_API_KEY:
         raise RuntimeError("未配置 LLM_BASE_URL / LLM_API_KEY")
     body = {
@@ -168,6 +173,8 @@ def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 
     }
     if enable_search:
         body["enable_search"] = True
+    if enable_thinking is not None:
+        body["enable_thinking"] = enable_thinking
     req = _stream_request(body, timeout)
     ctx = ssl.create_default_context()
     try:
@@ -199,18 +206,24 @@ def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 
         raise RuntimeError(f"模型接口连不上：{reason}") from exc
 
     ctype = (resp.headers.get("Content-Type") or "").lower()
+    deadline = time.monotonic() + timeout
+    finished = False
     try:
         if "text/event-stream" not in ctype and "json" in ctype:
             payload = json.loads(resp.read().decode("utf-8", errors="replace"))
             if payload.get("error"):
                 raise RuntimeError(str(payload["error"]))
+            if (payload.get("choices") or [{}])[0].get("finish_reason") == "length":
+                raise RuntimeError("生成内容达到长度上限，未完整返回")
             text = ((payload.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
             if text:
                 yield str(text)
             return
         buf = b""
         while True:
-            chunk = resp.read(256)
+            if time.monotonic() > deadline:
+                raise RuntimeError("模型生成超时，已停止等待")
+            chunk = resp.read1(4096) if hasattr(resp, "read1") else resp.read(256)
             if not chunk:
                 break
             buf += chunk
@@ -228,8 +241,49 @@ def chat_stream(messages: list[dict], *, max_tokens: int = 1200, timeout: int = 
                     continue
                 if payload.get("error"):
                     raise RuntimeError(str(payload["error"]))
+                finish_reason = (payload.get("choices") or [{}])[0].get("finish_reason")
+                if finish_reason == "length":
+                    raise RuntimeError("生成内容达到长度上限，未完整返回")
+                if finish_reason == "stop":
+                    finished = True
                 piece = _delta_text(payload)
                 if piece:
                     yield piece
+        if not finished:
+            raise RuntimeError("模型输出连接中断，内容未完成")
     finally:
         resp.close()
+
+
+def search_response(prompt: str, mime: str, b64: str) -> tuple[str, list[str]]:
+    """Require a provider-confirmed web search; never silently fall back to memory."""
+    started = time.monotonic()
+    payload = _request(f"{LLM_BASE_URL}/responses", {
+        "model": LLM_MODEL,
+        "input": [{"role": "user", "content": [
+            {"type": "input_text", "text": prompt},
+            {"type": "input_image", "image_url": f"data:{mime};base64,{b64}"},
+        ]}],
+        "tools": [{"type": "web_search"}],
+        "tool_choice": "required",
+        "max_tool_calls": 3,
+        "enable_thinking": False,
+        "max_output_tokens": 2000,
+        "store": False,
+    }, 90)
+    output = payload.get("output") or []
+    calls = [item for item in output if item.get("type") == "web_search_call" and item.get("status") == "completed"]
+    logger.warning("search request_id=%s elapsed=%.1fs calls=%d status=%s", payload.get("id"), time.monotonic() - started, len(calls), payload.get("status"))
+    if not calls:
+        raise RuntimeError("未收到阿里云搜索执行记录，地点尚未核验")
+    sources = list(dict.fromkeys(
+        source["url"] for call in calls for source in (call.get("action") or {}).get("sources", [])
+        if isinstance(source.get("url"), str) and source["url"].startswith(("https://", "http://"))
+    ))
+    if not sources:
+        raise RuntimeError("阿里云搜索未返回来源，地点尚未核验")
+    if payload.get("status") != "completed":
+        raise RuntimeError("搜索核验输出未完成")
+    text = "".join(part.get("text", "") for item in output if item.get("type") == "message"
+                   for part in item.get("content", []) if part.get("type") == "output_text")
+    return text, sources

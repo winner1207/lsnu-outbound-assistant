@@ -19,11 +19,11 @@ class IdentPromptTest(unittest.TestCase):
         self.assertIn("东方佛都摩崖石刻群", hints)
         self.assertIn("福寿", hints["东方佛都摩崖石刻群"])
 
-    def test_ident_prompt_contains_dynamic_content(self):
+    def test_ident_prompt_is_independent_of_local_glossary(self):
         prompt = agent._ident_prompt()
-        self.assertIn("东方佛都", prompt)
-        self.assertIn("回头是岸", prompt)
-        self.assertIn("依山巨型坐佛", prompt)
+        self.assertNotIn("东方佛都", prompt)
+        self.assertNotIn("回头是岸", prompt)
+        self.assertNotIn("依山巨型坐佛", prompt)
         self.assertIn("candidates", prompt)
 
     def test_dongfang_fodu_term_unreviewed(self):
