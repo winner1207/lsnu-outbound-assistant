@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="乐山师范学院校徽">
   <defs>
-    <path id="arc-top" d="M 28,108 A 74,74 0 0,1 172,108"/>
-    <path id="arc-bot" d="M 32,112 A 74,74 0 0,1 168,112"/>
+    <path id="arc-top" d="M 48,42 A 78,78 0 0,1 152,42"/>
+    <path id="arc-bot" d="M 152,158 A 78,78 0 0,1 48,158"/>
   </defs>
   <circle cx="100" cy="100" r="98" fill="#fff"/>
-  <circle cx="100" cy="100" r="94" fill="none" stroke="#005CA1" stroke-width="4"/>
-  <circle cx="100" cy="100" r="90" fill="none" stroke="#005CA1" stroke-width="1.2"/>
-  <circle cx="100" cy="100" r="62" fill="none" stroke="#005CA1" stroke-width="3"/>
-  <text fill="#005CA1" font-size="14" font-weight="700" font-family="SimSun, STSong, 'Songti SC', serif" letter-spacing="3">
+  <circle cx="100" cy="100" r="93" fill="none" stroke="#005CA1" stroke-width="4.5"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#005CA1" stroke-width="1"/>
+  <circle cx="100" cy="100" r="58" fill="none" stroke="#005CA1" stroke-width="3"/>
+  <text fill="#005CA1" font-size="12" font-weight="700" font-family="SimSun, STSong, 'Songti SC', serif" letter-spacing="2">
     <textPath href="#arc-top" startOffset="50%" text-anchor="middle">弘毅自强　笃学践行</textPath>
   </text>
-  <text fill="#005CA1" font-size="8" font-weight="700" font-family="Times New Roman, Times, serif" letter-spacing="1.2">
+  <text fill="#005CA1" font-size="6.5" font-weight="700" font-family="Times New Roman, Times, serif" letter-spacing="0.8">
     <textPath href="#arc-bot" startOffset="50%" text-anchor="middle">LESHAN NORMAL UNIVERSITY</textPath>
   </text>
-  <g fill="#005CA1" transform="translate(100 108)">
-    <circle cx="11" cy="-20" r="12.5"/>
-    <path d="M8-10c18 2 28 16 22 32-6 14-26 20-40 10-16-10-20-32-8-44 6-6 16-6 18 2-8 4-10 16-2 24 8 8 18 6 22-2 2-6-2-12-12-14z"/>
-    <path d="M-6 8c-10 2-22-4-26-14-2 12 4 26 16 32 8 4 18 2 22-4-8-2-14-8-12-14z"/>
+  <g fill="#005CA1" transform="translate(100 104)">
+    <circle cx="10" cy="-18" r="11"/>
+    <path d="M7-9c16 2 25 14 20 28-5 12-23 18-36 9-14-9-18-28-7-39 5-5 14-5 16 2-7 3-9 14-2 21 7 7 16 5 20-2 2-5-2-11-11-12z"/>
+    <path d="M-5 8c-9 2-20-4-23-12-2 11 4 23 14 28 7 4 16 2 20-4-7-2-12-7-11-12z"/>
   </g>
 </svg>
