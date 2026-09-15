@@ -60,6 +60,11 @@ def index():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/favicon.ico")
+def favicon():
+    return FileResponse(BRAND_DIR / "favicon.ico", media_type="image/x-icon")
+
+
 @app.get("/api/health")
 def health():
     return {"ok": True, "name": "lsnu-outbound-assistant"}
