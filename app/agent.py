@@ -41,12 +41,10 @@ def _ident_prompt() -> str:
     return IDENT_PROMPT_TEMPLATE
 
 
-STORY_PROMPT = """你是识景译韵-多语言智能解说系统。下面是识图结果和检索摘要。请写七语导游讲解。
-识图：
-{ident_json}
+STORY_PROMPT = """你是识景译韵-多语言智能解说系统。按已识别名称写七语导游讲解，不要写识图鉴定。
 
-检索摘要（可能有噪音，只采纳与画面吻合的条目）：
-{grounding}
+识别名称：{label_zh}
+图中文字：{ocr_text}
 
 已知口径：
 {facts}
@@ -55,11 +53,12 @@ STORY_PROMPT = """你是识景译韵-多语言智能解说系统。下面是识�
 {term_table}
 
 规则：
-- 标题用识图给出的地名；检索能印证则写清行政区。
-- 先讲画面里看见的，再补地理/人文故事。
-- 检索与画面冲突时以画面为准，并注明依据不足。
-- 七语 zh en ja fr es ko th，每语 80–140 字。
-- 按 zh、en、ja、fr、es、ko、th 的顺序写 JSON，写完一个字段再写下一项。
+- 有名称就讲这里的故事：是什么、在哪、游客怎么看、题刻怎么读。画面最多一句带过。
+- 不要复述岩石纹理、苔藓、光线等识别推理。
+- 不要写「尚难确定」「别处也有类似」「具体地点无法唯一确定」。地点对错由识别栏和手选场景负责。
+- 名称为无法确定或无法确认时，短说明看不清，请手选场景，不要编造乐山故事。
+- 不要编造没有依据的年代、数字与新传说。
+- 七语 zh en ja fr es ko th，有名称时每语 80–140 字，无法确定时 40–80 字。
 只返回 JSON：
 {{"zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
 """
@@ -88,13 +87,12 @@ TEXT_PROMPT = """你是识景译韵-多语言智能解说系统。用户手动�
 只返回 JSON：
 {{"scene":"photo","label_zh":"专名短名","reason":"一句话","zh":"...","en":"...","ja":"...","fr":"...","es":"...","ko":"...","th":"..."}}
 """
-CHAT_PROMPT = """你是识景译韵-多语言智能解说系统。请围绕用户刚上传的这张照片继续回答。
+CHAT_PROMPT = """你是识景译韵-多语言智能解说系统。请围绕已识别的专名做导游解答，不要再鉴定这张图是不是该地。
 识别名称：{label_zh}
 图中文字：{ocr_text}
-画面：{in_photo}
 专名锁定：
 {term_table}
-先依据画面所见；问到题刻按识读结果解释，看不清就注明依据不足。
+问到题刻按识读结果解释。不要讨论「别处也有类似」或「地点无法唯一确定」。
 用用户提问的语言回答；未限定时用中文，并补两句英文。"""
 
 
@@ -274,6 +272,11 @@ def story_terms(ident: dict) -> list[dict]:
             if any(name and name in text for name in [term["zh"], *(term.get("aliases_zh") or [])])]
 
 
+def _unknown_place(ident: dict) -> bool:
+    label = (ident.get("label_zh") or "").strip()
+    return label in ("", "无法确定", "无法确认")
+
+
 def iter_write_story(ident_raw: dict, raw: str, grounding: str, *, enable_search: bool = False):
     terms = story_terms(ident_raw)
     locked = {lang: "" for lang in LANGS}
@@ -281,11 +284,24 @@ def iter_write_story(ident_raw: dict, raw: str, grounding: str, *, enable_search
 
     def generate(lang: str, chinese: str = "") -> str:
         prompt = (f"只输出{LANG_LABEL[lang]}讲解正文，不输出JSON、标题或其它语言。"
-                  "保持地点的不确定性，不添加没有依据的年代、数字与传说。")
+                  "这是导游词，不是识图鉴定。不添加没有依据的年代、数字与新传说。")
         if lang == "zh":
-            content = "写80到140字中文讲解，先说画面。资料：" + json.dumps(ident_raw, ensure_ascii=False) + "\n" + grounding
+            label = (ident_raw.get("label_zh") or "").strip() or "无法确定"
+            ocr = (ident_raw.get("ocr_text") or "").strip() or "（无）"
+            if _unknown_place(ident_raw):
+                content = (
+                    "未能确认具体地名。用40到80字说明看不清或证据不足，请用户手选场景。"
+                    "不要编造乐山或其它景区故事，不要描写岩石纹理来凑字。"
+                )
+            else:
+                content = (
+                    f"写80到140字中文导游讲解，对象是「{label}」。图中文字：{ocr}。\n"
+                    "按已知口径讲它是什么、在哪、游客怎么看、题刻怎么读。画面最多一句带过。\n"
+                    "不要复述识别推理，不要写「尚难确定」「别处也有类似」「具体地点无法唯一确定」。\n"
+                    f"已知口径：\n{KNOWN_FACTS}"
+                )
         else:
-            content = "忠实翻译以下中文，保持相同事实和不确定性，不新增内容：\n" + chinese
+            content = "忠实翻译以下中文导游词，不新增内容，不要改成鉴定报告：\n" + chinese
         content += "\n仅在涉及对应专名时采用以下译名：\n" + glossary.term_table_for_prompt(terms)
         text = "".join(llm.chat_stream(
             [{"role": "system", "content": prompt}, {"role": "user", "content": content}],
@@ -392,8 +408,8 @@ def generate_intro(ident: dict) -> tuple[list[dict], dict[str, str], dict[str, l
             {
                 "role": "system",
                 "content": STORY_PROMPT.format(
-                    ident_json=str(ident),
-                    grounding="（无检索）",
+                    label_zh=ident.get("label_zh") or "无法确定",
+                    ocr_text=ident.get("ocr_text") or "（无）",
                     facts=KNOWN_FACTS,
                     term_table=glossary.term_table_for_prompt(terms),
                 ),
@@ -401,11 +417,9 @@ def generate_intro(ident: dict) -> tuple[list[dict], dict[str, str], dict[str, l
             {
                 "role": "user",
                 "content": (
-                    f"不看图，按已识读结果写七语讲解。\n"
+                    f"按识别名称写导游讲解，不要写鉴定报告。\n"
                     f"名称：{ident.get('label_zh')}\n"
-                    f"图中文字：{ident.get('ocr_text')}\n"
-                    f"识读说明：{ident.get('ocr_note')}\n"
-                    f"画面：{ident.get('in_photo')}"
+                    f"图中文字：{ident.get('ocr_text') or '（无）'}"
                 ),
             },
         ],
@@ -440,7 +454,6 @@ def create_session(ident: dict, terms: list[dict], intro: dict, hits: dict) -> d
                 "content": CHAT_PROMPT.format(
                     label_zh=ident["label_zh"],
                     ocr_text=ident.get("ocr_text") or "（无）",
-                    in_photo=ident.get("in_photo") or "（无）",
                     term_table=glossary.term_table_for_prompt(terms),
                 ),
             },
@@ -526,7 +539,6 @@ def override_scene(session_id: str, scene: str) -> dict:
                     "content": CHAT_PROMPT.format(
                         label_zh=ident["label_zh"],
                         ocr_text=ident.get("ocr_text") or "（无）",
-                        in_photo=ident.get("in_photo") or "（无）",
                         term_table=glossary.term_table_for_prompt(terms),
                     ),
                 },

@@ -57,6 +57,36 @@ def test_chinese_delivered_before_translations_and_no_search():
     assert all('中文正文' in messages[-1]['content'] for messages, _ in calls[1:])
 
 
+def test_story_prompt_tells_named_place_story_not_visual_forensics():
+    calls = []
+    def stream(messages, **kwargs):
+        calls.append(messages)
+        yield '故事'
+    ident = {'label_zh': '回头是岸', 'ocr_text': '回头是岸', 'features': ['苔藓', '蕨类'], 'reason': '南方丹霞也有类似'}
+    with patch.object(llm, 'chat_stream', side_effect=stream):
+        next(agent.iter_write_story(ident, '{}', '南方多处丹霞亦有相同题刻'))
+    system, user = calls[0][0]['content'], calls[0][1]['content']
+    assert '导游' in system
+    assert '回头是岸' in user
+    assert '先说画面' not in user
+    assert '保持地点的不确定性' not in system
+    assert '苔藓' not in user
+    assert '南方多处丹霞' not in user
+    assert '不要写「尚难确定」' in user
+
+
+def test_story_prompt_unknown_does_not_invent_place():
+    calls = []
+    def stream(messages, **kwargs):
+        calls.append(messages)
+        yield '未确认'
+    with patch.object(llm, 'chat_stream', side_effect=stream):
+        next(agent.iter_write_story({'label_zh': '无法确定'}, '{}', ''))
+    user = calls[0][1]['content']
+    assert '不要编造乐山' in user
+    assert '手选场景' in user
+
+
 def test_failed_language_does_not_discard_other_languages():
     def stream(messages, **kwargs):
         if '日文' in messages[0]['content']:
