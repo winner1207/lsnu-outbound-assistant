@@ -142,24 +142,56 @@ function renderIdent(data) {
   }
 }
 
+function renderCorrections(data) {
+  const box = $("corrections");
+  const btns = $("correction-btns");
+  const form = $("correction-form");
+  if (!box || !btns) return;
+  const alts = (data && data.corrections) || [];
+  btns.replaceChildren();
+  if (!state.sessionId) {
+    box.hidden = true;
+    if (form) form.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  alts.forEach((item) => {
+    const name = item.label_zh || item;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = name;
+    b.dataset.label = name;
+    btns.appendChild(b);
+  });
+}
+
+async function applyRelabel(label) {
+  const name = String(label || "").trim();
+  if (!name || !state.sessionId) return;
+  setStatus(t("relabeling"));
+  try {
+    const res = await fetch("/api/relabel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: state.sessionId, label_zh: name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(localizeServerMessage(data.detail) || t("relabel_fail"));
+    renderResult(data);
+    setStatus(t("scene_updated"));
+  } catch (err) {
+    setStatus(err.message || String(err));
+  }
+}
+
 function renderResult(data) {
   if (!data) return;
   if (data.session_id) state.sessionId = data.session_id;
   state.terms = data.term_table || state.terms || [];
   renderIdent(data);
-  const select = $("scene");
-  if (data.scenes && data.scenes.length) {
-    select.innerHTML = "";
-    data.scenes.forEach((scene) => {
-      const opt = document.createElement("option");
-      opt.value = scene.id;
-      opt.textContent = sceneLabel(scene);
-      if (scene.id === data.scene) opt.selected = true;
-      select.appendChild(opt);
-    });
-    select.disabled = false;
-  }
   $("terms").innerHTML = state.terms.map((t) => `<span>${escapeHtml(t.zh)} / ${escapeHtml(t.en)}</span>`).join("");
+  renderCorrections(data);
   LANGS.forEach((lang) => {
     const text = (data.intro && data.intro[lang]) || "";
     if (!text) return;
@@ -202,10 +234,10 @@ $("analyze").addEventListener("click", async () => {
   $("terms").replaceChildren();
   $("sources").replaceChildren();
   $("sources").hidden = true;
-  $("scene").disabled = true;
+  if ($("corrections")) $("corrections").hidden = true;
+  if ($("correction-form")) $("correction-form").hidden = true;
   $("q").disabled = true;
   $("ask").querySelector("button").disabled = true;
-  $("translate").disabled = true;
   let completed = false;
   LANGS.forEach((lang) => { $(lang).innerHTML = ""; });
   $("chat").innerHTML = "";
@@ -259,25 +291,26 @@ $("analyze").addEventListener("click", async () => {
   } finally {
     progressStop();
     $("analyze").disabled = false;
-    $("translate").disabled = false;
   }
 });
 
-$("scene").addEventListener("change", async (ev) => {
-  if (!state.sessionId) return;
-  setStatus(t("scene_regen"));
-  try {
-    const res = await fetch("/api/scene", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: state.sessionId, scene: ev.target.value }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(localizeServerMessage(data.detail) || t("scene_fail"));
-    renderResult(data);
-    setStatus(t("scene_updated"));
-  } catch (err) {
-    setStatus(err.message || String(err));
+$("correction-btns").addEventListener("click", (ev) => {
+  const btn = ev.target.closest("[data-label]");
+  if (!btn) return;
+  applyRelabel(btn.dataset.label);
+});
+$("correction-other").addEventListener("click", () => {
+  const form = $("correction-form");
+  if (form) form.hidden = !form.hidden;
+  if (form && !form.hidden) $("correction-q").focus();
+});
+$("correction-go").addEventListener("click", () => {
+  applyRelabel($("correction-q").value);
+});
+$("correction-q").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") {
+    ev.preventDefault();
+    applyRelabel($("correction-q").value);
   }
 });
 
@@ -447,31 +480,4 @@ $("term-del").addEventListener("click", async () => {
 });
 loadCatalog().catch((err) => {
   $("term-list").innerHTML = `<p class="muted">${escapeHtml(err.message || String(err))}</p>`;
-});
-
-$("translate").addEventListener("click", async () => {
-  const query = $("query").value.trim();
-  if (!query) {
-    setStatus(t("need_query"));
-    return;
-  }
-  $("translate").disabled = true;
-  setSteps("identify");
-  setStatus(t("generating"));
-  try {
-    const res = await fetch("/api/text", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(localizeServerMessage(data.detail) || t("explain_fail"));
-    setSteps("deliver");
-    renderResult(data);
-    setStatus(t("done"));
-  } catch (err) {
-    setStatus(err.message || String(err));
-  } finally {
-    $("translate").disabled = false;
-  }
 });

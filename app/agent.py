@@ -280,6 +280,42 @@ def story_terms(ident: dict) -> list[dict]:
             if any(name and name in text for name in [term["zh"], *(term.get("aliases_zh") or [])])]
 
 
+_SKIP_CORR = {"", "无法确定", "无法确认", "画面景物", "图中景物（随手拍）"}
+
+
+def _name_key(name: str) -> str:
+    return glossary.fold_zh((name or "").strip())
+
+
+def correction_options(ident: dict) -> list[dict]:
+    current = _name_key(ident.get("label_zh") or "")
+    skip = {_name_key(x) for x in _SKIP_CORR}
+    seen = {current} if current and current not in skip else set()
+    seen |= skip
+    out: list[dict] = []
+
+    def add(name: str, source: str) -> bool:
+        label = (name or "").strip()
+        key = _name_key(label)
+        if not key or key in seen:
+            return False
+        seen.add(key)
+        out.append({"label_zh": label, "source": source})
+        return len(out) >= 3
+
+    for cand in ident.get("candidates") or []:
+        name = cand.get("name") if isinstance(cand, dict) else str(cand or "")
+        if add(name, "model"):
+            return out
+    texts = [ident.get("ocr_text") or "", ident.get("in_photo") or "", ident.get("label_zh") or ""]
+    for term, score in glossary.match_terms(texts):
+        if score < 70:
+            continue
+        if add(term["zh"], "glossary"):
+            return out
+    return out
+
+
 def _unknown_place(ident: dict) -> bool:
     label = (ident.get("label_zh") or "").strip()
     return label in ("", "无法确定", "无法确认")
@@ -353,6 +389,7 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None, scop
     ident["decision"] = "possible"
     features = ident_raw.get("features") or ocr_texts
     cands = ident_raw.get("candidates") or []
+    ident["candidates"] = cands
     yield {
         "type": "identify",
         "step": "identify",
@@ -369,6 +406,7 @@ def iter_photo_progress(mime: str, b64: str, original: bytes | None = None, scop
         ident_raw.update(decision="possible", search_status="failed", sources=[],
                          reason="联网核验未完成，以下仅为视觉候选。" + str(exc)[:160])
     ident = {**_normalize_ident(ident_raw), **{k: ident_raw.get(k, []) for k in ("decision", "sources", "evidence", "contradictions")}}
+    ident["candidates"] = ident_raw.get("candidates") or cands
     raw = json.dumps(ident_raw, ensure_ascii=False)
     grounding = ident.get("reason", "")
     decision_label = {"confirmed": "证据较充分", "probable": "较可能，仍需核实", "possible": "待核验候选", "unknown": "无法确认"}[ident_raw["decision"]]
@@ -458,6 +496,7 @@ def create_session(ident: dict, terms: list[dict], intro: dict, hits: dict) -> d
         "terms": terms,
         "intro": intro,
         "hits": hits,
+        "corrections": correction_options(ident),
         "messages": [
             {
                 "role": "system",
@@ -500,6 +539,7 @@ def public_session(session: dict, extra: dict | None = None) -> dict:
         **{k: session["ident"].get(k) for k in ("decision", "sources", "evidence", "contradictions")},
         "intro": session["intro"],
         "locked_terms": session["hits"],
+        "corrections": session.get("corrections") or [],
         "term_table": [
             {
                 "zh": t["zh"],
@@ -521,6 +561,51 @@ def public_session(session: dict, extra: dict | None = None) -> dict:
     if extra:
         payload.update(extra)
     return payload
+
+
+def relabel(session_id: str, label_zh: str) -> dict:
+    session = SESSIONS.get(session_id)
+    if not session:
+        raise KeyError("会话不存在，请重新上传图片")
+    label = (label_zh or "").strip()
+    if not label or len(label) > 40:
+        raise ValueError("请填写专名")
+    ident = dict(session.get("ident") or {})
+    ident["label_zh"] = label
+    ident["decision"] = "probable"
+    ident["reason"] = "用户从候选中更正"
+    hits = glossary.match_terms([label])
+    if hits and hits[0][1] >= 70:
+        term = hits[0][0]
+        ident["scene"] = glossary.scene_for_term(term)
+        if term.get("region"):
+            ident["region"] = term["region"]
+    terms, intro, locked = generate_intro(ident)
+    session.update(
+        {
+            "ts": time.time(),
+            "ident": ident,
+            "scene": ident.get("scene") or session.get("scene") or "photo",
+            "label_zh": label,
+            "reason": ident["reason"],
+            "confidence": ident.get("confidence") or session.get("confidence") or 0,
+            "terms": terms,
+            "intro": intro,
+            "hits": locked,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": CHAT_PROMPT.format(
+                        label_zh=label,
+                        ocr_text=ident.get("ocr_text") or "（无）",
+                        term_table=glossary.term_table_for_prompt(terms),
+                    ),
+                },
+                {"role": "assistant", "content": intro.get("zh") or ""},
+            ],
+        }
+    )
+    return public_session(session)
 
 
 def override_scene(session_id: str, scene: str) -> dict:

@@ -90,6 +90,13 @@ h2 { margin: 0 0 12px; font-size: 16px; color: var(--blue); }
 .drop img { max-height: 180px; max-width: 100%; display: block; margin: 0 auto 8px; }
 .drop img[hidden] { display: none !important; }
 #hint { display: block; overflow-wrap: anywhere; }
+.corrections { margin-top: 12px; }
+.corrections .row { flex-wrap: wrap; }
+.corrections .chip {
+  background: #fff; color: var(--blue); border: 1px solid var(--blue);
+  font-weight: 700;
+}
+.corrections .chip.on { background: var(--blue); color: #fff; }
 .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; min-width: 0; max-width: 100%; }
 button, select, input[type=text] {
   font: inherit; border-radius: 8px; border: 1px solid #cfe0f0;

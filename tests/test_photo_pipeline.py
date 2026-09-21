@@ -106,6 +106,44 @@ def test_story_prompt_unknown_does_not_invent_place():
     assert '手选场景' in user
 
 
+def test_correction_options_skips_current_and_unknown():
+    ident = {
+        "label_zh": "回头是岸",
+        "ocr_text": "回头是岸",
+        "candidates": [
+            {"name": "回头是岸"},
+            {"name": "凌云寺"},
+            {"name": "乐山大佛"},
+            {"name": "嘉阳小火车"},
+            {"name": "无法确定"},
+        ],
+    }
+    names = [item["label_zh"] for item in agent.correction_options(ident)]
+    assert "回头是岸" not in names
+    assert "无法确定" not in names
+    assert names[:2] == ["凌云寺", "乐山大佛"]
+    assert len(names) <= 3
+
+
+def test_relabel_keeps_session_and_updates_label():
+    ident = {
+        "scene": "photo",
+        "label_zh": "旧名",
+        "confidence": 0.4,
+        "reason": "初判",
+        "ocr_text": "",
+        "candidates": [{"name": "凌云寺"}],
+    }
+    with patch.object(agent, "generate_intro", return_value=([], {"zh": "新讲解"}, {})):
+        payload = agent.create_session(ident, [], {"zh": "旧讲解"}, {})
+        sid = payload["session_id"]
+        assert any(item["label_zh"] == "凌云寺" for item in payload["corrections"])
+        out = agent.relabel(sid, "凌云寺")
+    assert out["session_id"] == sid
+    assert out["label_zh"] == "凌云寺"
+    assert out["intro"]["zh"] == "新讲解"
+
+
 def test_failed_language_does_not_discard_other_languages():
     def stream(messages, **kwargs):
         if '日文' in messages[0]['content']:

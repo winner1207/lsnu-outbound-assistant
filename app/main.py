@@ -35,6 +35,11 @@ class SceneIn(BaseModel):
     scene: str
 
 
+class RelabelIn(BaseModel):
+    session_id: str
+    label_zh: str = Field(min_length=1, max_length=40)
+
+
 class TextIn(BaseModel):
     query: str = Field(min_length=1, max_length=200)
 
@@ -115,6 +120,18 @@ async def analyze(request: Request, file: UploadFile = File(...)):
         scope = geoip.scope_from_ip(geoip.client_ip(request))
         ident, terms, intro, hits = agent.explain_photo(mime, b64, original=data, scope=scope)
         return agent.create_session(ident, terms, intro, hits)
+    except RuntimeError as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
+@app.post("/api/relabel")
+def relabel(body: RelabelIn):
+    try:
+        return agent.relabel(body.session_id, body.label_zh)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
 

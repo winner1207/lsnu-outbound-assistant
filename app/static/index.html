@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png?v=5">
   <link rel="icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/brand/badge.png?v=5">
-  <link rel="stylesheet" href="/static/styles.css?v=8">
+  <link rel="stylesheet" href="/static/styles.css?v=9">
 </head>
 <body>
   <header class="top">
@@ -36,18 +36,6 @@
         <button id="analyze" type="button" data-i18n="analyze">识别并讲解</button>
         <p id="status" class="muted"></p>
       </div>
-      <p class="muted" data-i18n="scene_hint">若识别不准，可手改场景</p>
-      <label class="field">
-        <select id="scene" disabled></select>
-      </label>
-      <div class="manual">
-        <label class="field"><span data-i18n="query_label">或手动输入专名</span>
-          <input id="query" type="text" maxlength="80" placeholder="峨眉山金顶" data-i18n-placeholder="query_placeholder">
-        </label>
-        <div class="row">
-          <button id="translate" type="button" data-i18n="translate">多语言讲解</button>
-        </div>
-      </div>
     </section>
     <section class="card">
       <h2 data-i18n="steps_title">2. 处理步骤</h2>
@@ -62,6 +50,15 @@
         <ol id="think-log"></ol>
       </details>
       <p id="ident" class="muted" data-i18n="ident_none">尚未识别。</p>
+      <div id="corrections" class="corrections" hidden>
+        <p class="muted" data-i18n="also_maybe">也可能是</p>
+        <div id="correction-btns" class="row"></div>
+        <button type="button" id="correction-other" class="ghost" data-i18n="none_of_these">都不对</button>
+        <div id="correction-form" class="row" hidden>
+          <input id="correction-q" type="text" maxlength="40" data-i18n-placeholder="query_placeholder" placeholder="峨眉山金顶">
+          <button type="button" id="correction-go" data-i18n="use_this">按这个讲</button>
+        </div>
+      </div>
       <ul id="sources" class="muted" hidden></ul>
       <p id="ocr" class="ocr" hidden></p>
       <div id="terms" class="terms"></div>
@@ -144,7 +141,7 @@
     </section>
   </main>
   <footer data-i18n="footer">乐山师范学院 · 融合创新+，智绘乐师新征程</footer>
-  <script src="/static/i18n.js?v=9"></script>
-  <script src="/static/app.js?v=8"></script>
+  <script src="/static/i18n.js?v=10"></script>
+  <script src="/static/app.js?v=9"></script>
 </body>
 </html>
