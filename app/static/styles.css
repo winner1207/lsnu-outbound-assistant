@@ -34,6 +34,14 @@ body {
   background: #fff;
 }
 .brand { flex: 1; min-width: 0; padding-left: 2px; }
+.lang-switch {
+  display: flex; gap: 4px; flex-shrink: 0; margin-left: auto; align-self: flex-start;
+}
+.lang-switch button {
+  background: #fff; color: var(--blue); border: 1px solid var(--blue);
+  padding: 4px 8px; font-size: 12px; font-weight: 700; min-width: 36px;
+}
+.lang-switch button.on { background: var(--blue); color: #fff; }
 .school {
   margin: 0;
   font: 700 32px/1.1 SimSun, "Songti SC", "Noto Serif SC", serif;
@@ -129,7 +137,8 @@ footer { text-align: center; color: #7a7a7a; font-size: 12px; padding: 8px 16px 
 }
 @media (max-width: 860px) {
   .layout, .langs, .steps { grid-template-columns: 1fr; }
-  .top { gap: 12px; padding: 12px 16px 10px; }
+  .top { gap: 12px; padding: 12px 16px 10px; flex-wrap: wrap; }
+  .lang-switch { width: 100%; justify-content: flex-end; margin: 0; }
   .logo { height: 64px; width: 64px; }
   .school { font-size: 20px; letter-spacing: 0.06em; }
   .school-en { font-size: 10px; letter-spacing: 0.08em; }

@@ -7,137 +7,144 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png?v=5">
   <link rel="icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/brand/badge.png?v=5">
-  <link rel="stylesheet" href="/static/styles.css?v=7">
+  <link rel="stylesheet" href="/static/styles.css?v=8">
 </head>
 <body>
   <header class="top">
-    <img class="logo" src="/brand/badge.png?v=5" alt="乐山师范学院校徽">
+    <img class="logo" src="/brand/badge.png?v=5" alt="乐山师范学院校徽" data-i18n-alt="logo_alt">
     <div class="brand">
       <p class="school">乐山师范学院</p>
       <p class="school-en">LESHAN NORMAL UNIVERSITY</p>
-      <h1>识景译韵-多语言智能解说系统</h1>
+      <h1 data-i18n="product">识景译韵-多语言智能解说系统</h1>
     </div>
+    <nav class="lang-switch" aria-label="Language">
+      <button type="button" data-lang="zh">中</button>
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="ja">日</button>
+      <button type="button" data-lang="fr">FR</button>
+    </nav>
   </header>
   <main class="layout">
     <section class="card">
-      <h2>1. 上传图片</h2>
+      <h2 data-i18n="upload_title">1. 上传图片</h2>
       <label class="drop" for="file">
         <input id="file" type="file" accept="image/jpeg,image/png,image/webp">
-        <img id="preview" alt="预览" hidden>
-        <span id="hint">任意照片：峨眉山、乐山大佛、牌匾、题刻……<br>jpg / png / webp，小于 10MB</span>
+        <img id="preview" alt="预览" data-i18n-alt="preview_alt" hidden>
+        <span id="hint" data-i18n-html="hint">任意照片：峨眉山、乐山大佛、牌匾、题刻……<br>jpg / png / webp，小于 10MB</span>
       </label>
       <div class="row">
-        <button id="analyze" type="button">识别并讲解</button>
+        <button id="analyze" type="button" data-i18n="analyze">识别并讲解</button>
         <p id="status" class="muted"></p>
       </div>
-      <p class="muted">若识别不准，可手改场景</p>
+      <p class="muted" data-i18n="scene_hint">若识别不准，可手改场景</p>
       <label class="field">
         <select id="scene" disabled></select>
       </label>
       <div class="manual">
-        <label class="field">或手动输入专名
-          <input id="query" type="text" maxlength="80" placeholder="峨眉山金顶">
+        <label class="field"><span data-i18n="query_label">或手动输入专名</span>
+          <input id="query" type="text" maxlength="80" placeholder="峨眉山金顶" data-i18n-placeholder="query_placeholder">
         </label>
         <div class="row">
-          <button id="translate" type="button">七语讲解</button>
+          <button id="translate" type="button" data-i18n="translate">多语言讲解</button>
         </div>
       </div>
     </section>
     <section class="card">
-      <h2>2. 处理步骤</h2>
+      <h2 data-i18n="steps_title">2. 处理步骤</h2>
       <ol class="steps" id="steps">
-        <li data-step="identify">看图 · 抽特征</li>
-        <li data-step="search">检索 · 核对地名</li>
-        <li data-step="story">撰写 · 七语故事</li>
-        <li data-step="deliver">交付 · 完成</li>
+        <li data-step="identify" data-i18n="step_identify">看图 · 抽特征</li>
+        <li data-step="search" data-i18n="step_search">检索 · 核对地名</li>
+        <li data-step="story" data-i18n="step_story">撰写 · 多语故事</li>
+        <li data-step="deliver" data-i18n="step_deliver">交付 · 完成</li>
       </ol>
       <details class="think" id="think-box" open>
-        <summary>处理记录</summary>
+        <summary data-i18n="think_summary">处理记录</summary>
         <ol id="think-log"></ol>
       </details>
-      <p id="ident" class="muted">尚未识别。</p>
+      <p id="ident" class="muted" data-i18n="ident_none">尚未识别。</p>
       <ul id="sources" class="muted" hidden></ul>
       <p id="ocr" class="ocr" hidden></p>
       <div id="terms" class="terms"></div>
     </section>
     <section class="card wide">
-      <h2>3. 图中内容讲解</h2>
+      <h2 data-i18n="intro_title">3. 图中内容讲解</h2>
       <div class="langs" id="langs">
-        <article><h3>中文</h3><p id="zh"></p></article>
-        <article><h3>English</h3><p id="en"></p></article>
-        <article><h3>日本語</h3><p id="ja"></p></article>
-        <article><h3>Français</h3><p id="fr"></p></article>
-        <article><h3>Español</h3><p id="es"></p></article>
-        <article><h3>한국어</h3><p id="ko"></p></article>
-        <article><h3>ไทย</h3><p id="th"></p></article>
+        <article><h3 data-i18n="lang_zh">中文</h3><p id="zh"></p></article>
+        <article><h3 data-i18n="lang_en">English</h3><p id="en"></p></article>
+        <article><h3 data-i18n="lang_ja">日本語</h3><p id="ja"></p></article>
+        <article><h3 data-i18n="lang_fr">Français</h3><p id="fr"></p></article>
+        <article><h3 data-i18n="lang_es">Español</h3><p id="es"></p></article>
+        <article><h3 data-i18n="lang_ko">한국어</h3><p id="ko"></p></article>
+        <article><h3 data-i18n="lang_th">ไทย</h3><p id="th"></p></article>
       </div>
     </section>
     <section class="card wide">
-      <h2>4. 继续对话</h2>
+      <h2 data-i18n="chat_title">4. 继续对话</h2>
       <div id="chat" class="chat"></div>
       <form id="ask" class="row">
-        <input id="q" type="text" placeholder="例如：牌匾上这几个字什么意思？这句佛语怎么跟留学生讲？" autocomplete="off" disabled>
-        <button type="submit" disabled>发送</button>
+        <input id="q" type="text" placeholder="例如：牌匾上这几个字什么意思？这句佛语怎么跟留学生讲？" data-i18n-placeholder="chat_placeholder" autocomplete="off" disabled>
+        <button type="submit" disabled data-i18n="send">发送</button>
       </form>
     </section>
     <section class="card wide">
-      <h2>5. 校本术语</h2>
-      <p class="muted">维护专名及译法，保存后立即生效。</p>
+      <h2 data-i18n="terms_title">5. 校本术语</h2>
+      <p class="muted" data-i18n="terms_help">维护专名及译法，保存后立即生效。</p>
       <div class="row">
-        <input id="term-q" type="text" placeholder="筛选中文 / 英文 / 日文" maxlength="40">
-        <button id="term-new" type="button" class="ghost">新增</button>
+        <input id="term-q" type="text" placeholder="筛选中文 / 英文 / 日文" data-i18n-placeholder="terms_filter" maxlength="40">
+        <button id="term-new" type="button" class="ghost" data-i18n="term_new">新增</button>
       </div>
       <div class="term-table" id="term-list"></div>
       <form id="term-form" class="term-form" hidden>
         <input id="term-id" type="hidden">
-        <label class="field">中文专名
-          <input id="term-zh" type="text" maxlength="40" required placeholder="回头是岸">
+        <label class="field"><span data-i18n="term_zh">中文专名</span>
+          <input id="term-zh" type="text" maxlength="40" required placeholder="回头是岸" data-i18n-placeholder="ph_term_zh">
         </label>
-        <label class="field">英文
+        <label class="field"><span data-i18n="term_en">英文</span>
           <input id="term-en" type="text" maxlength="80">
         </label>
-        <label class="field">日本語
+        <label class="field"><span data-i18n="term_ja">日本語</span>
           <input id="term-ja" type="text" maxlength="80">
         </label>
-        <label class="field">Français
+        <label class="field"><span data-i18n="term_fr">Français</span>
           <input id="term-fr" type="text" maxlength="80">
         </label>
-        <label class="field">Español
+        <label class="field"><span data-i18n="term_es">Español</span>
           <input id="term-es" type="text" maxlength="80">
         </label>
-        <label class="field">한국어
+        <label class="field"><span data-i18n="term_ko">한국어</span>
           <input id="term-ko" type="text" maxlength="80">
         </label>
-        <label class="field">ไทย
+        <label class="field"><span data-i18n="term_th">ไทย</span>
           <input id="term-th" type="text" maxlength="80">
         </label>
-        <label class="field">词包
+        <label class="field"><span data-i18n="term_pack">词包</span>
           <select id="term-pack"></select>
         </label>
-        <label class="field">场景（可选）
+        <label class="field"><span data-i18n="term_scene">场景（可选）</span>
           <select id="term-scene"></select>
         </label>
-        <label class="field">地名 / 区域
-          <input id="term-region" type="text" maxlength="40" placeholder="四川乐山凌云山">
+        <label class="field"><span data-i18n="term_region">地名 / 区域</span>
+          <input id="term-region" type="text" maxlength="40" placeholder="四川乐山凌云山" data-i18n-placeholder="ph_region">
         </label>
-        <label class="field span2">中文别名
-          <input id="term-aliases" type="text" maxlength="120" placeholder="回頭是岸">
+        <label class="field span2"><span data-i18n="term_aliases">中文别名</span>
+          <input id="term-aliases" type="text" maxlength="120" placeholder="回頭是岸" data-i18n-placeholder="ph_aliases">
         </label>
-        <label class="field">来源
+        <label class="field"><span data-i18n="term_source">来源</span>
           <input id="term-source" type="text" maxlength="80">
         </label>
-        <label class="field">审定
+        <label class="field"><span data-i18n="term_reviewer">审定</span>
           <input id="term-reviewer" type="text" maxlength="40">
         </label>
         <div class="row span2">
-          <button type="submit">保存</button>
-          <button id="term-del" type="button" class="danger">删除</button>
+          <button type="submit" data-i18n="save">保存</button>
+          <button id="term-del" type="button" class="danger" data-i18n="delete">删除</button>
           <p id="term-status" class="muted"></p>
         </div>
       </form>
     </section>
   </main>
-  <footer>乐山师范学院 · 融合创新+，智绘乐师新征程</footer>
-  <script src="/static/app.js"></script>
+  <footer data-i18n="footer">乐山师范学院 · 融合创新+，智绘乐师新征程</footer>
+  <script src="/static/i18n.js?v=8"></script>
+  <script src="/static/app.js?v=8"></script>
 </body>
 </html>

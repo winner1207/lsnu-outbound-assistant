@@ -3,7 +3,7 @@ const LANGS = ["zh", "en", "ja", "fr", "es", "ko", "th"];
 const state = { sessionId: "", terms: [], catalog: { terms: [], scenes: [], packs: [] }, editingId: "" };
 let progressStartedAt = 0;
 let progressTimer = 0;
-let progressMessage = "正在处理";
+let progressMessage = t("processing");
 
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -17,7 +17,7 @@ function thinkClear() {
 
 function thinkAdd(step, message) {
   const li = document.createElement("li");
-  const tag = { identify: "看图", search: "检索", story: "撰写", deliver: "完成" }[step] || step;
+  const tag = { identify: t("tag_identify"), search: t("tag_search"), story: t("tag_story"), deliver: t("tag_deliver") }[step] || step;
   const elapsed = progressStartedAt ? ` <small>${((Date.now() - progressStartedAt) / 1000).toFixed(1)}s</small>` : "";
   li.innerHTML = `<em>${tag}</em>${escapeHtml(message)}${elapsed}`;
   $("think-log").appendChild(li);
@@ -28,7 +28,7 @@ function progressStart() {
   progressStartedAt = Date.now();
   clearInterval(progressTimer);
   progressTimer = setInterval(() => {
-    if (progressStartedAt) $("status").textContent = `${progressMessage} · 总耗时 ${((Date.now() - progressStartedAt) / 1000).toFixed(0)} 秒`;
+    if (progressStartedAt) $("status").textContent = t("elapsed", { msg: progressMessage, n: ((Date.now() - progressStartedAt) / 1000).toFixed(0) });
   }, 1000);
 }
 
@@ -39,7 +39,7 @@ function progressStop() {
 }
 
 async function readSSE(res, onEvent) {
-  if (!res.body) throw new Error("浏览器不支持流式输出");
+  if (!res.body) throw new Error(t("sse_unsupported"));
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
@@ -65,7 +65,7 @@ function setStatus(text) {
 function friendlyError(err) {
   const raw = String((err && err.message) || err || "");
   if (/network error|failed to fetch|load failed|networkerror/i.test(raw)) {
-    return "连接中断：七语讲解生成时间过长。请再试一次。";
+    return t("network_error");
   }
   return raw;
 }
@@ -110,12 +110,13 @@ function highlight(text, words) {
 
 function renderIdent(data) {
   if (!data) return;
-  const bits = [data.region ? `识别为「${data.label_zh}」（${data.region}）` : `识别为「${data.label_zh || "画面景物"}」`];
-  const decisions = { confirmed: "证据较充分", probable: "较可能，仍需核实", possible: "待核验候选", unknown: "无法确认" };
-  if (data.decision) bits.unshift(decisions[data.decision] || "待核验候选");
+  const name = data.label_zh || t("scene_fallback");
+  const bits = [data.region ? t("recognized_region", { name, region: data.region }) : t("recognized", { name })];
+  const decisions = { confirmed: t("decision_confirmed"), probable: t("decision_probable"), possible: t("decision_possible"), unknown: t("decision_unknown") };
+  if (data.decision) bits.unshift(decisions[data.decision] || t("decision_possible"));
   if (data.scene === "unknown" && data.label_zh && data.label_zh !== "无法确认") {
-    const conf = data.confidence != null ? data.confidence : "低";
-    bits.push(`未审定候选，置信度约 ${conf}，请人工核实`);
+    const conf = data.confidence != null ? data.confidence : t("conf_low");
+    bits.push(t("unverified", { conf }));
   }
   if (data.in_photo) bits.push(data.in_photo);
   if (data.reason) bits.push(data.reason);
@@ -137,7 +138,7 @@ function renderIdent(data) {
   $("ocr").hidden = !data.ocr_text;
   if (data.ocr_text) {
     $("ocr").hidden = false;
-    $("ocr").textContent = `图中文字：${data.ocr_text}${data.ocr_note ? "（" + data.ocr_note + "）" : ""}`;
+    $("ocr").textContent = `${t("ocr_prefix")}${data.ocr_text}${data.ocr_note ? "（" + data.ocr_note + "）" : ""}`;
   }
 }
 
@@ -152,7 +153,7 @@ function renderResult(data) {
     data.scenes.forEach((scene) => {
       const opt = document.createElement("option");
       opt.value = scene.id;
-      opt.textContent = scene.label_zh;
+      opt.textContent = sceneLabel(scene);
       if (scene.id === data.scene) opt.selected = true;
       select.appendChild(opt);
     });
@@ -165,13 +166,14 @@ function renderResult(data) {
     const hits = (data.locked_terms && data.locked_terms[lang]) || [];
     $(lang).innerHTML = highlight(text, hits);
   });
-  const zh = (data.intro && data.intro.zh) || "";
-  if (zh) {
+  const uiText = (data.intro && (data.intro[UI_LANG] || data.intro.zh)) || "";
+  if (uiText) {
     $("q").disabled = false;
     $("ask").querySelector("button").disabled = false;
-    if ($("chat").dataset.zh !== zh) {
-      $("chat").dataset.zh = zh;
-      $("chat").innerHTML = `<div class="msg bot">${highlight(zh, (data.locked_terms && data.locked_terms.zh) || [])}</div>`;
+    if ($("chat").dataset.seed !== uiText) {
+      $("chat").dataset.seed = uiText;
+      const hits = (data.locked_terms && (data.locked_terms[UI_LANG] || data.locked_terms.zh)) || [];
+      $("chat").innerHTML = `<div class="msg bot">${highlight(uiText, hits)}</div>`;
     }
   }
 }
@@ -187,7 +189,7 @@ $("file").addEventListener("change", () => {
 $("analyze").addEventListener("click", async () => {
   const file = $("file").files[0];
   if (!file) {
-    setStatus("请先选择图片");
+    setStatus(t("pick_image"));
     return;
   }
   const body = new FormData();
@@ -207,30 +209,31 @@ $("analyze").addEventListener("click", async () => {
   let completed = false;
   LANGS.forEach((lang) => { $(lang).innerHTML = ""; });
   $("chat").innerHTML = "";
-  $("chat").dataset.zh = "";
-  $("ident").textContent = "正在识别…";
+  $("chat").dataset.seed = "";
+  $("ident").textContent = t("identifying");
   $("ocr").hidden = true;
   setSteps("identify");
-  setStatus("正在识别…");
-  thinkAdd("identify", "已提交图片");
+  setStatus(t("identifying"));
+  thinkAdd("identify", t("submitted"));
   try {
     const res = await fetch("/api/analyze/stream", { method: "POST", body });
-    if (!res.ok) throw new Error("识别请求失败");
+    if (!res.ok) throw new Error(t("analyze_fail"));
     await readSSE(res, (ev) => {
       if (ev.step) setSteps(ev.step);
       if (ev.message) {
-        setStatus(ev.message);
-        if (ev.message) thinkAdd(ev.step || "identify", ev.message);
+        const msg = localizeServerMessage(ev.message);
+        setStatus(msg);
+        thinkAdd(ev.step || "identify", msg);
       }
       if ((ev.type === "identify" || ev.type === "search") && ev.ident) {
         renderIdent(ev.ident);
       }
       if (ev.type === "identify" && ev.features && ev.features.length) {
-        thinkAdd("identify", "特征：" + ev.features.join("、"));
+        thinkAdd("identify", t("features_prefix") + ev.features.join("、"));
       }
       if (ev.type === "identify" && ev.candidates && ev.candidates.length) {
         const names = ev.candidates.map((c) => `${c.name || ""} ${c.confidence != null ? c.confidence : ""}`.trim());
-        thinkAdd("identify", "候选：" + names.join("；"));
+        thinkAdd("identify", t("candidates_prefix") + names.join("；"));
       }
       if (ev.type === "search" && ev.grounding) {
         thinkAdd("search", ev.grounding.slice(0, 220));
@@ -240,15 +243,15 @@ $("analyze").addEventListener("click", async () => {
       }
       if (ev.type === "done") {
         completed = true;
-        setStatus(ev.message || "完成");
+        setStatus(ev.message ? localizeServerMessage(ev.message) : t("done"));
         progressStop();
       }
       if (ev.type === "error") {
-        thinkAdd(ev.step || "identify", ev.message || "识别失败");
-        throw new Error(ev.message || "识别失败");
+        thinkAdd(ev.step || "identify", ev.message ? localizeServerMessage(ev.message) : t("identify_fail"));
+        throw new Error(ev.message ? localizeServerMessage(ev.message) : t("identify_fail"));
       }
     });
-    if (!completed) throw new Error("连接已结束但结果未完成，已保留收到的内容，请重试。");
+    if (!completed) throw new Error(t("incomplete"));
   } catch (err) {
     const msg = friendlyError(err);
     setStatus(msg);
@@ -262,7 +265,7 @@ $("analyze").addEventListener("click", async () => {
 
 $("scene").addEventListener("change", async (ev) => {
   if (!state.sessionId) return;
-  setStatus("按手选场景重新生成…");
+  setStatus(t("scene_regen"));
   try {
     const res = await fetch("/api/scene", {
       method: "POST",
@@ -270,9 +273,9 @@ $("scene").addEventListener("change", async (ev) => {
       body: JSON.stringify({ session_id: state.sessionId, scene: ev.target.value }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "切换失败");
+    if (!res.ok) throw new Error(localizeServerMessage(data.detail) || t("scene_fail"));
     renderResult(data);
-    setStatus("已按手选场景更新");
+    setStatus(t("scene_updated"));
   } catch (err) {
     setStatus(err.message || String(err));
   }
@@ -291,7 +294,7 @@ $("ask").addEventListener("submit", async (ev) => {
       body: JSON.stringify({ session_id: state.sessionId, message: text }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "对话失败");
+    if (!res.ok) throw new Error(localizeServerMessage(data.detail) || t("chat_fail"));
     $("chat").insertAdjacentHTML("beforeend", `<div class="msg bot">${highlight(data.reply, data.locked_terms)}</div>`);
     $("chat").scrollTop = $("chat").scrollHeight;
   } catch (err) {
@@ -309,16 +312,21 @@ function apiError(data, fallback) {
 
 function fillSelect(node, items, extra) {
   node.innerHTML = "";
+  const labelOf = (item) => {
+    if (!item.id) return item.label_zh || t("unspecified");
+    if (node.id === "term-pack") return packLabel(item.id);
+    return sceneLabel(item);
+  };
   (extra || []).forEach((item) => {
     const opt = document.createElement("option");
     opt.value = item.id;
-    opt.textContent = item.label_zh;
+    opt.textContent = labelOf(item);
     node.appendChild(opt);
   });
   (items || []).forEach((item) => {
     const opt = document.createElement("option");
     opt.value = item.id;
-    opt.textContent = item.label_zh;
+    opt.textContent = labelOf(item);
     node.appendChild(opt);
   });
 }
@@ -330,12 +338,11 @@ function renderTermList() {
     return [t.zh, t.en, t.ja, t.id].some((x) => String(x || "").toLowerCase().includes(q));
   });
   if (!rows.length) {
-    $("term-list").innerHTML = `<p class="muted">${q ? "没有匹配的词条" : "词库是空的"}</p>`;
+    $("term-list").innerHTML = `<p class="muted">${q ? t("no_match") : t("empty_glossary")}</p>`;
     return;
   }
-  $("term-list").innerHTML = `<table><thead><tr><th>中文</th><th>English</th><th>日本語</th><th>词包</th></tr></thead><tbody>${rows.map((t) => {
-    const pack = (state.catalog.packs || []).find((p) => p.id === t.pack);
-    return `<tr data-id="${escapeHtml(t.id)}" class="${t.id === state.editingId ? "on" : ""}"><td>${escapeHtml(t.zh)}</td><td>${escapeHtml(t.en)}</td><td>${escapeHtml(t.ja)}</td><td>${escapeHtml((pack && pack.label_zh) || t.pack || "")}</td></tr>`;
+  $("term-list").innerHTML = `<table><thead><tr><th>${t("th_zh")}</th><th>${t("th_en")}</th><th>${t("th_ja")}</th><th>${t("th_pack")}</th></tr></thead><tbody>${rows.map((term) => {
+    return `<tr data-id="${escapeHtml(term.id)}" class="${term.id === state.editingId ? "on" : ""}"><td>${escapeHtml(term.zh)}</td><td>${escapeHtml(term.en)}</td><td>${escapeHtml(term.ja)}</td><td>${escapeHtml(packLabel(term.pack))}</td></tr>`;
   }).join("")}</tbody></table>`;
 }
 
@@ -354,7 +361,7 @@ function showTermForm(term) {
   $("term-source").value = (term && term.source) || "";
   $("term-reviewer").value = (term && term.reviewer) || "";
   $("term-del").hidden = !state.editingId;
-  $("term-status").textContent = state.editingId ? "正在编辑「" + (term.zh || "") + "」" : "新增词条";
+  $("term-status").textContent = state.editingId ? t("editing", { name: term.zh || "" }) : t("new_term");
   renderTermList();
   $("term-zh").focus();
 }
@@ -380,10 +387,10 @@ function collectTerm() {
 async function loadCatalog() {
   const res = await fetch("/api/terms");
   const data = await res.json();
-  if (!res.ok) throw new Error(apiError(data, "读取词库失败"));
+  if (!res.ok) throw new Error(apiError(data, t("load_fail")));
   state.catalog = data;
   fillSelect($("term-pack"), data.packs || []);
-  fillSelect($("term-scene"), data.scenes || [], [{ id: "", label_zh: "不指定" }]);
+  fillSelect($("term-scene"), data.scenes || [], [{ id: "", label_zh: t("unspecified") }]);
   renderTermList();
 }
 
@@ -399,11 +406,11 @@ $("term-form").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const body = collectTerm();
   if (!body.zh) {
-    $("term-status").textContent = "请填写中文专名";
+    $("term-status").textContent = t("need_zh");
     return;
   }
   const editing = $("term-id").value;
-  $("term-status").textContent = "保存中…";
+  $("term-status").textContent = t("saving");
   try {
     const res = await fetch(editing ? "/api/terms/" + encodeURIComponent(editing) : "/api/terms", {
       method: editing ? "PUT" : "POST",
@@ -411,10 +418,10 @@ $("term-form").addEventListener("submit", async (ev) => {
       body: JSON.stringify(body),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(apiError(data, "保存失败"));
+    if (!res.ok) throw new Error(apiError(data, t("save_fail")));
     await loadCatalog();
     showTermForm(data);
-    $("term-status").textContent = "已保存";
+    $("term-status").textContent = t("saved");
   } catch (err) {
     $("term-status").textContent = err.message || String(err);
   }
@@ -423,16 +430,16 @@ $("term-del").addEventListener("click", async () => {
   const id = $("term-id").value;
   const zh = $("term-zh").value.trim();
   if (!id) return;
-  if (!window.confirm("确定删除「" + (zh || id) + "」？")) return;
-  $("term-status").textContent = "删除中…";
+  if (!window.confirm(t("delete_confirm", { name: zh || id }))) return;
+  $("term-status").textContent = t("deleting");
   try {
     const res = await fetch("/api/terms/" + encodeURIComponent(id), { method: "DELETE" });
     const data = await res.json();
-    if (!res.ok) throw new Error(apiError(data, "删除失败"));
+    if (!res.ok) throw new Error(apiError(data, t("delete_fail")));
     await loadCatalog();
     $("term-form").hidden = true;
     state.editingId = "";
-    $("term-status").textContent = "已删除";
+    $("term-status").textContent = t("deleted");
     renderTermList();
   } catch (err) {
     $("term-status").textContent = err.message || String(err);
@@ -445,12 +452,12 @@ loadCatalog().catch((err) => {
 $("translate").addEventListener("click", async () => {
   const query = $("query").value.trim();
   if (!query) {
-    setStatus("请输入专名，例如：乐山大佛下山虎");
+    setStatus(t("need_query"));
     return;
   }
   $("translate").disabled = true;
   setSteps("identify");
-  setStatus("正在生成七语讲解…");
+  setStatus(t("generating"));
   try {
     const res = await fetch("/api/text", {
       method: "POST",
@@ -458,10 +465,10 @@ $("translate").addEventListener("click", async () => {
       body: JSON.stringify({ query }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "讲解失败");
+    if (!res.ok) throw new Error(localizeServerMessage(data.detail) || t("explain_fail"));
     setSteps("deliver");
     renderResult(data);
-    setStatus("完成");
+    setStatus(t("done"));
   } catch (err) {
     setStatus(err.message || String(err));
   } finally {
