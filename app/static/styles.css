@@ -8,14 +8,17 @@
   --danger: #A1272C;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; }
+html, body { margin: 0; min-height: 100%; width: 100%; overflow-x: hidden; }
 body {
   font: 16px/1.65 "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--text);
   background: var(--paper);
 }
 .top {
+  position: relative;
   display: flex; gap: 28px; align-items: center;
+  width: 100%;
+  max-width: 100%;
   padding: 16px 28px 14px;
   background: #fff;
   border-bottom: 3px solid var(--blue);
@@ -26,17 +29,17 @@ body {
   position: absolute; left: 0; right: 0; top: 0; height: 4px;
   background: linear-gradient(90deg, #c60080, #13449e);
 }
-body { position: relative; }
 .logo {
   height: 96px; width: 96px; object-fit: contain; flex-shrink: 0;
   background: #fff;
 }
-.brand { min-width: 0; padding-left: 2px; }
+.brand { flex: 1; min-width: 0; padding-left: 2px; }
 .school {
   margin: 0;
   font: 700 32px/1.1 SimSun, "Songti SC", "Noto Serif SC", serif;
   letter-spacing: 0.18em;
   color: var(--blue);
+  overflow-wrap: anywhere;
 }
 .school-en {
   margin: 6px 0 0;
@@ -44,6 +47,7 @@ body { position: relative; }
   letter-spacing: 0.28em;
   color: var(--blue);
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 h1 {
   margin: 12px 0 0;
@@ -52,6 +56,7 @@ h1 {
   color: #333;
   font-weight: 700;
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  overflow-wrap: anywhere;
 }
 .muted { margin: 4px 0 0; color: #666; font-size: 13px; }
 .layout {
@@ -117,11 +122,11 @@ footer { text-align: center; color: #7a7a7a; font-size: 12px; padding: 8px 16px 
 }
 @media (max-width: 860px) {
   .layout, .langs, .steps { grid-template-columns: 1fr; }
-  .top { gap: 16px; }
-  .logo { height: 72px; width: 72px; }
-  .school { font-size: 22px; letter-spacing: 0.1em; }
-  .school-en { font-size: 11px; letter-spacing: 0.16em; }
-  h1 { font-size: 16px; margin-top: 8px; }
+  .top { gap: 12px; padding: 12px 16px 10px; }
+  .logo { height: 64px; width: 64px; }
+  .school { font-size: 20px; letter-spacing: 0.06em; }
+  .school-en { font-size: 10px; letter-spacing: 0.08em; }
+  h1 { font-size: 15px; margin-top: 8px; }
 }
 
 .think { margin: 8px 0 12px; background: #f7fbff; border: 1px solid #d5e6f5; border-radius: 10px; padding: 8px 12px; }
