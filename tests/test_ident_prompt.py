@@ -20,11 +20,13 @@ class IdentPromptTest(unittest.TestCase):
         self.assertIn("福寿", hints["东方佛都摩崖石刻群"])
 
     def test_ident_prompt_is_independent_of_local_glossary(self):
-        prompt = agent._ident_prompt()
+        prompt = agent._ident_prompt("四川乐山")
         self.assertNotIn("东方佛都", prompt)
         self.assertNotIn("回头是岸", prompt)
         self.assertNotIn("依山巨型坐佛", prompt)
         self.assertIn("candidates", prompt)
+        self.assertIn("四川乐山", prompt)
+        self.assertIn("扩大", prompt)
 
     def test_dongfang_fodu_term_unreviewed(self):
         term = next(t for t in glossary.all_terms() if t["id"] == "dongfang-fodu")

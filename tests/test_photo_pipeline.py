@@ -9,8 +9,19 @@ from app import agent, llm
 def test_visual_prompt_has_no_local_glossary():
     with patch.object(agent.glossary, 'inscription_terms', side_effect=AssertionError('local bias')):
         prompt = agent._ident_prompt()
-    assert '乐山' not in prompt
+    assert '回头是岸' not in prompt
     assert '万峰林' not in prompt
+    assert '优先' in prompt
+
+
+def test_ident_prompt_uses_ip_scope_then_expands():
+    hangzhou = agent._ident_prompt('浙江杭州')
+    assert '浙江杭州' in hangzhou
+    assert '优先' in hangzhou
+    assert '扩大' in hangzhou
+    leshan = agent._ident_prompt('四川乐山')
+    assert '四川乐山' in leshan
+    assert '杭州' not in leshan
 
 
 def test_search_requires_actual_tool_execution():
@@ -29,6 +40,14 @@ def test_search_keeps_provider_sources_not_model_invented_links():
     assert sources == ['https://example.org/proof']
     assert json.loads(text)['label_zh'] == '新地点'
     assert call.call_args.args[1]['tool_choice'] == 'required'
+
+
+def test_verify_ident_searches_ip_scope_first():
+    with patch.object(llm, 'search_response', return_value=(json.dumps({'label_zh': '新地点', 'decision': 'possible'}), [])) as call:
+        agent.verify_ident({'label_zh': '旧地点', 'features': ['双塔']}, 'image/jpeg', 'YWJj', scope='浙江杭州')
+    prompt = call.call_args.args[0]
+    assert '浙江杭州' in prompt
+    assert '由近到远' in prompt
 
 
 def test_verification_updates_label_and_uses_picture_features():

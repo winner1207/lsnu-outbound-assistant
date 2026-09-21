@@ -117,6 +117,7 @@ const I18N = {
     srv_partial: "正在生成其余语种，已完成的内容可先阅读",
     srv_partial_fail: "部分语种生成失败，已保留其它内容",
     srv_kb: "正在处理图片（{kb} KB）",
+    srv_scope: "按{city}范围识别…",
     srv_wait: "{msg}（本阶段已等待 {n} 秒）",
     srv_guess: "初步判断：{name}",
     srv_verify: "核验结果：{name}",
@@ -260,6 +261,7 @@ const I18N = {
     srv_partial: "Still writing other languages; you can read what is ready",
     srv_partial_fail: "Some languages failed; the rest was kept",
     srv_kb: "Processing image ({kb} KB)",
+    srv_scope: "Recognizing within {city}…",
     srv_wait: "{msg} (this step has waited {n}s)",
     srv_guess: "First reading: {name}",
     srv_verify: "Verification: {name}",
@@ -403,6 +405,7 @@ const I18N = {
     srv_partial: "他言語を生成中です。できた分から読めます",
     srv_partial_fail: "一部の言語は失敗しました。他は残しています",
     srv_kb: "画像を処理中（{kb} KB）",
+    srv_scope: "{city}の範囲で識別中…",
     srv_wait: "{msg}（この段階で {n} 秒待機）",
     srv_guess: "暫定判断：{name}",
     srv_verify: "検証結果：{name}",
@@ -546,6 +549,7 @@ const I18N = {
     srv_partial: "Autres langues en cours ; vous pouvez lire ce qui est prêt",
     srv_partial_fail: "Certaines langues ont échoué ; le reste est conservé",
     srv_kb: "Traitement de l'image ({kb} Ko)",
+    srv_scope: "Reconnaissance dans {city}…",
     srv_wait: "{msg} (cette étape attend depuis {n} s)",
     srv_guess: "Première lecture : {name}",
     srv_verify: "Vérification : {name}",
@@ -651,6 +655,8 @@ function localizeServerMessage(msg) {
   if (exact[s]) return t(exact[s]);
   let m = s.match(/^正在处理图片（(\d+) KB）$/);
   if (m) return t("srv_kb", { kb: m[1] });
+  m = s.match(/^按(.+)范围识别…$/);
+  if (m) return t("srv_scope", { city: m[1] });
   m = s.match(/^(.+)（本阶段已等待 (\d+) 秒）$/);
   if (m) return t("srv_wait", { msg: localizeServerMessage(m[1]), n: m[2] });
   m = s.match(/^初步判断：(.+)$/);

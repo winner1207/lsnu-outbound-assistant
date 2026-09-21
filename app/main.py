@@ -4,12 +4,12 @@ from __future__ import annotations
 import base64
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import agent, glossary, imageutil
+from app import agent, geoip, glossary, imageutil
 from app.config import BRAND_DIR, MAX_UPLOAD_BYTES, STATIC_DIR
 from app.sseutil import iter_with_keepalive, sse
 
@@ -71,7 +71,7 @@ def health():
 
 
 @app.post("/api/analyze/stream")
-async def analyze_stream(file: UploadFile = File(...)):
+async def analyze_stream(request: Request, file: UploadFile = File(...)):
     suffix = Path(file.filename or "").suffix.lower()
     mime = MIME.get(suffix)
     if not mime:
@@ -82,11 +82,12 @@ async def analyze_stream(file: UploadFile = File(...)):
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(400, "图片请小于 10MB")
     mime, b64, _n = imageutil.compress_for_vision(data, mime)
+    scope = geoip.scope_from_ip(geoip.client_ip(request))
 
     def producer():
         try:
             yield sse({"type": "status", "step": "identify", "message": f"正在处理图片（{_n // 1024} KB）"})
-            for ev in agent.iter_photo_progress(mime, b64, original=data):
+            for ev in agent.iter_photo_progress(mime, b64, original=data, scope=scope):
                 yield sse(ev)
         except Exception as exc:
             yield sse({"type": "error", "message": str(exc)})
@@ -99,7 +100,7 @@ async def analyze_stream(file: UploadFile = File(...)):
 
 
 @app.post("/api/analyze")
-async def analyze(file: UploadFile = File(...)):
+async def analyze(request: Request, file: UploadFile = File(...)):
     suffix = Path(file.filename or "").suffix.lower()
     mime = MIME.get(suffix)
     if not mime:
@@ -111,7 +112,8 @@ async def analyze(file: UploadFile = File(...)):
         raise HTTPException(400, "图片请小于 10MB")
     try:
         mime, b64, _n = imageutil.compress_for_vision(data, mime)
-        ident, terms, intro, hits = agent.explain_photo(mime, b64, original=data)
+        scope = geoip.scope_from_ip(geoip.client_ip(request))
+        ident, terms, intro, hits = agent.explain_photo(mime, b64, original=data, scope=scope)
         return agent.create_session(ident, terms, intro, hits)
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
