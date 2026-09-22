@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import os
-import posixpath
-import stat
 import sys
 from pathlib import Path
 
@@ -11,10 +9,6 @@ import paramiko
 
 ROOT = Path(__file__).resolve().parents[1]
 DEPLOY_ENV = ROOT / ".deploy.env"
-SKIP_DIRS = {".git", ".venv", "__pycache__", ".ssh", ".idea", "debug"}
-SKIP_FILES = {".deploy.env", ".env"}
-PRESERVE_REMOTE = {"data/glossary.json"}
-SKIP_NAME_PREFIX = ("_probe_host", "_switch_host", "_patch_", "_test_", "_sse", "_think", "_skip_")
 
 
 def load_deploy_env() -> dict[str, str]:
@@ -35,37 +29,6 @@ def load_deploy_env() -> dict[str, str]:
     if not data.get("DEPLOY_PASS") and not data.get("DEPLOY_KEY"):
         raise SystemExit("需要 DEPLOY_KEY 或 DEPLOY_PASS")
     return data
-
-
-def should_skip(path: Path) -> bool:
-    rel = path.relative_to(ROOT)
-    if any(part in SKIP_DIRS for part in rel.parts):
-        return True
-    if path.name in SKIP_FILES:
-        return True
-    if path.name.startswith(SKIP_NAME_PREFIX):
-        return True
-    return False
-
-
-def iter_local_files():
-    for path in ROOT.rglob("*"):
-        if not path.is_file():
-            continue
-        if should_skip(path):
-            continue
-        yield path
-
-
-def sftp_mkdirs(sftp: paramiko.SFTPClient, remote_dir: str) -> None:
-    parts = []
-    current = ""
-    for part in remote_dir.strip("/").split("/"):
-        current = current + "/" + part
-        try:
-            sftp.stat(current)
-        except FileNotFoundError:
-            sftp.mkdir(current)
 
 
 def ensure_ssh_key(client: paramiko.SSHClient) -> None:
@@ -108,7 +71,7 @@ def main() -> int:
     host, user, dest = cfg["DEPLOY_HOST"], cfg["DEPLOY_USER"], cfg["DEPLOY_PATH"]
     password = cfg.get("DEPLOY_PASS") or None
     key_path = cfg.get("DEPLOY_KEY") or None
-    print(f"deploy {host}:{dest} as {user}")
+    print(f"deploy {host}:{dest} as {user} (git pull)")
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -125,31 +88,15 @@ def main() -> int:
         connect_kw["password"] = password
     client.connect(**connect_kw)
     ensure_ssh_key(client)
-    remote_run(client, f"mkdir -p {dest} && chmod 755 {dest}")
 
-    sftp = client.open_sftp()
-    uploaded = 0
-    for path in iter_local_files():
-        rel = path.relative_to(ROOT).as_posix()
-        remote_path = posixpath.join(dest, rel)
-        sftp_mkdirs(sftp, posixpath.dirname(remote_path))
-        if rel in PRESERVE_REMOTE:
-            try:
-                sftp.stat(remote_path)
-                print("keep", rel)
-                continue
-            except FileNotFoundError:
-                pass
-        sftp.put(str(path), remote_path)
-        mode = 0o600 if path.name == ".env" else (path.stat().st_mode & 0o777)
-        sftp.chmod(remote_path, mode or 0o644)
-        uploaded += 1
-        print("put", rel)
-    sftp.close()
-    print(f"uploaded {uploaded} files")
+    if remote_run(client, f"test -d {dest}/.git") != 0:
+        print(f"{dest} 还不是 git 仓库。生产应先 HTTPS clone：")
+        print("  git clone --branch main https://github.com/winner1207/lsnu-outbound-assistant.git " + dest)
+        client.close()
+        return 1
 
-    remote_run(client, f"sed -i 's/\\r$//' {dest}/deploy/setup_remote.sh && chmod +x {dest}/deploy/setup_remote.sh")
-    code = remote_run(client, f"bash {dest}/deploy/setup_remote.sh", timeout=600)
+    remote_run(client, f"sed -i 's/\\r$//' {dest}/deploy/git_pull.sh && chmod +x {dest}/deploy/git_pull.sh")
+    code = remote_run(client, f"bash {dest}/deploy/git_pull.sh", timeout=600)
     client.close()
     return code
 

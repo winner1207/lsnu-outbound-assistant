@@ -13,6 +13,10 @@ python -m venv .venv
 
 ## 部署
 
+生产是 HTTPS git 仓库。本地提交并 `git push origin main` 后：
+
 ```
 python scripts/deploy_remote.py
 ```
+
+机上等价命令：`bash /opt/lsnu-outbound-assistant/deploy/git_pull.sh`。
