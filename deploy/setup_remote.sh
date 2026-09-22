@@ -3,7 +3,7 @@ set -euo pipefail
 DEST=/opt/lsnu-outbound-assistant
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y python3-venv python3-pip nginx libgl1 libglib2.0-0
+apt-get install -y python3-venv python3-pip nginx libgl1 libglib2.0-0 git
 cd "$DEST"
 python3 -m venv .venv
 .venv/bin/pip install -U pip

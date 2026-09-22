@@ -95,7 +95,6 @@ def main() -> int:
         client.close()
         return 1
 
-    remote_run(client, f"sed -i 's/\\r$//' {dest}/deploy/git_pull.sh && chmod +x {dest}/deploy/git_pull.sh")
     code = remote_run(client, f"bash {dest}/deploy/git_pull.sh", timeout=600)
     client.close()
     return code
