@@ -136,6 +136,22 @@ def relabel(body: RelabelIn):
         raise HTTPException(502, str(exc)) from exc
 
 
+@app.post("/api/relabel/stream")
+def relabel_stream(body: RelabelIn):
+    def producer():
+        try:
+            for ev in agent.iter_relabel(body.session_id, body.label_zh):
+                yield sse(ev)
+        except Exception as exc:
+            yield sse({"type": "error", "message": str(exc)})
+
+    return StreamingResponse(
+        iter_with_keepalive(producer),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @app.post("/api/scene")
 def change_scene(body: SceneIn):
     try:

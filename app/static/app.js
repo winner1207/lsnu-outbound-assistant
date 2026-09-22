@@ -193,22 +193,54 @@ function renderCorrections(data) {
   });
 }
 
+let relabelBusy = false;
+
 async function applyRelabel(label) {
   const name = String(label || "").trim();
-  if (!name || !state.sessionId) return;
+  if (!name || !state.sessionId || relabelBusy) return;
+  relabelBusy = true;
+  if ($("correction-go")) $("correction-go").disabled = true;
   setStatus(t("relabeling"));
+  progressStart();
+  setSteps("story");
+  thinkAdd("story", t("relabeling"));
+  let completed = false;
   try {
-    const res = await fetch("/api/relabel", {
+    const res = await fetch("/api/relabel/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_id: state.sessionId, label_zh: name }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(localizeServerMessage(data.detail) || t("relabel_fail"));
-    renderResult(data);
-    setStatus(t("scene_updated"));
+    if (!res.ok) {
+      let detail = t("relabel_fail");
+      try {
+        const data = await res.json();
+        detail = localizeServerMessage(data.detail) || detail;
+      } catch (err) { /* 非 JSON 错误页 */ }
+      throw new Error(detail);
+    }
+    await readSSE(res, (ev) => {
+      if (ev.step) setSteps(ev.step);
+      if (ev.message) {
+        const msg = localizeServerMessage(ev.message);
+        setStatus(msg);
+        thinkAdd(ev.step || "story", msg);
+      }
+      if ((ev.type === "partial" || ev.type === "done") && ev.result) renderResult(ev.result);
+      if (ev.type === "done") {
+        completed = true;
+        setStatus(t("scene_updated"));
+        progressStop();
+      }
+      if (ev.type === "error") throw new Error(ev.message ? localizeServerMessage(ev.message) : t("relabel_fail"));
+    });
+    if (!completed) throw new Error(t("incomplete"));
   } catch (err) {
-    setStatus(err.message || String(err));
+    setStatus(friendlyError(err));
+  } finally {
+    progressStop();
+    relabelBusy = false;
+    if ($("correction-go")) $("correction-go").disabled = false;
   }
 }
 

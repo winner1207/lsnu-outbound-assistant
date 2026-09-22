@@ -134,7 +134,12 @@ def test_relabel_keeps_session_and_updates_label():
         "ocr_text": "",
         "candidates": [{"name": "凌云寺"}],
     }
-    with patch.object(agent, "generate_intro", return_value=([], {"zh": "新讲解"}, {})):
+
+    def story(data, *args, **kwargs):
+        assert data["label_zh"] == "凌云寺"
+        yield [], {"zh": "新讲解"}, {}, ["zh"]
+
+    with patch.object(agent, "iter_write_story", side_effect=story):
         payload = agent.create_session(ident, [], {"zh": "旧讲解"}, {})
         sid = payload["session_id"]
         assert any(item["label_zh"] == "凌云寺" for item in payload["corrections"])
@@ -142,6 +147,50 @@ def test_relabel_keeps_session_and_updates_label():
     assert out["session_id"] == sid
     assert out["label_zh"] == "凌云寺"
     assert out["intro"]["zh"] == "新讲解"
+
+
+def test_relabel_failure_keeps_previous_intro():
+    ident = {
+        "scene": "photo",
+        "label_zh": "旧名",
+        "confidence": 0.4,
+        "reason": "初判",
+        "ocr_text": "",
+    }
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("模型响应超时")
+        yield None
+
+    with patch.object(agent, "iter_write_story", side_effect=boom):
+        payload = agent.create_session(ident, [], {"zh": "旧讲解"}, {})
+        sid = payload["session_id"]
+        with pytest.raises(RuntimeError, match="超时"):
+            agent.relabel(sid, "峰林布依")
+    assert agent.SESSIONS[sid]["intro"]["zh"] == "旧讲解"
+    assert agent.SESSIONS[sid]["label_zh"] == "旧名"
+
+
+def test_iter_relabel_emits_progress_before_done():
+    ident = {
+        "scene": "photo",
+        "label_zh": "旧名",
+        "confidence": 0.4,
+        "reason": "初判",
+        "ocr_text": "",
+    }
+
+    def story(data, *args, **kwargs):
+        yield [], {"zh": "新讲解"}, {}, ["zh"]
+        yield [], {"zh": "新讲解", "en": "new"}, {}, ["en"]
+
+    with patch.object(agent, "iter_write_story", side_effect=story):
+        payload = agent.create_session(ident, [], {"zh": "旧讲解"}, {})
+        events = list(agent.iter_relabel(payload["session_id"], "峰林布依"))
+    assert events[0]["type"] == "status"
+    assert [ev["type"] for ev in events if ev["type"] in ("partial", "done")] == ["partial", "partial", "done"]
+    assert events[-1]["result"]["label_zh"] == "峰林布依"
+    assert events[-1]["result"]["intro"]["en"] == "new"
 
 
 def test_failed_language_does_not_discard_other_languages():

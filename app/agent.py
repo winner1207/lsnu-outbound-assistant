@@ -563,10 +563,7 @@ def public_session(session: dict, extra: dict | None = None) -> dict:
     return payload
 
 
-def relabel(session_id: str, label_zh: str) -> dict:
-    session = SESSIONS.get(session_id)
-    if not session:
-        raise KeyError("会话不存在，请重新上传图片")
+def _relabel_ident(session: dict, label_zh: str) -> dict:
     label = (label_zh or "").strip()
     if not label or len(label) > 40:
         raise ValueError("请填写专名")
@@ -574,13 +571,17 @@ def relabel(session_id: str, label_zh: str) -> dict:
     ident["label_zh"] = label
     ident["decision"] = "probable"
     ident["reason"] = "用户从候选中更正"
-    hits = glossary.match_terms([label])
-    if hits and hits[0][1] >= 70:
-        term = hits[0][0]
+    matched = glossary.match_terms([label])
+    if matched and matched[0][1] >= 70:
+        term = matched[0][0]
         ident["scene"] = glossary.scene_for_term(term)
         if term.get("region"):
             ident["region"] = term["region"]
-    terms, intro, locked = generate_intro(ident)
+    return ident
+
+
+def _store_relabel(session: dict, ident: dict, terms: list, intro: dict, hits: dict) -> dict:
+    label = ident["label_zh"]
     session.update(
         {
             "ts": time.time(),
@@ -591,7 +592,8 @@ def relabel(session_id: str, label_zh: str) -> dict:
             "confidence": ident.get("confidence") or session.get("confidence") or 0,
             "terms": terms,
             "intro": intro,
-            "hits": locked,
+            "hits": hits,
+            "corrections": correction_options(ident),
             "messages": [
                 {
                     "role": "system",
@@ -606,6 +608,39 @@ def relabel(session_id: str, label_zh: str) -> dict:
         }
     )
     return public_session(session)
+
+
+def iter_relabel(session_id: str, label_zh: str):
+    session = SESSIONS.get(session_id)
+    if not session:
+        raise KeyError("会话不存在，请重新上传图片")
+    ident = _relabel_ident(session, label_zh)
+    yield {"type": "status", "step": "story", "message": "按更正名称重新讲解…"}
+    payload = None
+    for terms, intro, hits, langs in iter_write_story(ident, "", ""):
+        payload = _store_relabel(session, ident, terms, intro, hits)
+        names = "、".join(LANG_LABEL.get(lang, lang) for lang in langs)
+        failed = any("生成失败" in (intro.get(lang) or "") for lang in langs)
+        yield {
+            "type": "partial",
+            "step": "story",
+            "langs": langs,
+            "result": payload,
+            "message": f"{names}生成失败，其它语种继续" if failed else f"已写出{names}",
+        }
+    if not payload:
+        raise RuntimeError("讲解未完成")
+    yield {"type": "done", "step": "deliver", "result": payload, "message": "讲解完成"}
+
+
+def relabel(session_id: str, label_zh: str) -> dict:
+    last = None
+    for ev in iter_relabel(session_id, label_zh):
+        if ev.get("result"):
+            last = ev["result"]
+    if not last:
+        raise RuntimeError("讲解未完成")
+    return last
 
 
 def override_scene(session_id: str, scene: str) -> dict:
