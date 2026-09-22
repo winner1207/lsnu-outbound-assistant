@@ -108,19 +108,45 @@ function highlight(text, words) {
   return html;
 }
 
+function setIdentLine(id, text) {
+  const el = $(id);
+  if (!el) return;
+  const value = String(text || "").trim();
+  el.hidden = !value;
+  el.textContent = value;
+}
+
+function resetIdent(title, muted = true) {
+  const heading = $("ident-title");
+  if (heading) {
+    heading.textContent = title;
+    heading.classList.toggle("muted", muted);
+  }
+  setIdentLine("ident-desc", "");
+  setIdentLine("ident-note", "");
+  setIdentLine("ident-reason", "");
+}
+
 function renderIdent(data) {
   if (!data) return;
   const name = data.label_zh || t("scene_fallback");
-  const bits = [data.region ? t("recognized_region", { name, region: data.region }) : t("recognized", { name })];
   const decisions = { confirmed: t("decision_confirmed"), probable: t("decision_probable"), possible: t("decision_possible"), unknown: t("decision_unknown") };
-  if (data.decision) bits.unshift(decisions[data.decision] || t("decision_possible"));
+  const title = [];
+  if (data.decision) title.push(decisions[data.decision] || t("decision_possible"));
+  title.push(data.region ? t("recognized_region", { name, region: data.region }) : t("recognized", { name }));
+  const heading = $("ident-title");
+  if (heading) {
+    heading.textContent = title.join(" · ");
+    heading.classList.remove("muted");
+  }
   if (data.scene === "unknown" && data.label_zh && data.label_zh !== "无法确认") {
     const conf = data.confidence != null ? data.confidence : t("conf_low");
-    bits.push(t("unverified", { conf }));
+    setIdentLine("ident-note", t("unverified", { conf }));
+  } else {
+    setIdentLine("ident-note", "");
   }
-  if (data.in_photo) bits.push(data.in_photo);
-  if (data.reason) bits.push(data.reason);
-  $("ident").textContent = bits.join(" · ");
+  setIdentLine("ident-desc", data.in_photo);
+  setIdentLine("ident-reason", data.reason);
   const sources = $("sources");
   sources.replaceChildren();
   for (const url of data.sources || []) {
@@ -129,6 +155,7 @@ function renderIdent(data) {
     const link = document.createElement("a");
     link.href = url;
     link.textContent = url;
+    link.title = url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     li.appendChild(link);
@@ -242,7 +269,7 @@ $("analyze").addEventListener("click", async () => {
   LANGS.forEach((lang) => { $(lang).innerHTML = ""; });
   $("chat").innerHTML = "";
   $("chat").dataset.seed = "";
-  $("ident").textContent = t("identifying");
+  resetIdent(t("identifying"));
   $("ocr").hidden = true;
   setSteps("identify");
   setStatus(t("identifying"));
